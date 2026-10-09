@@ -1,0 +1,129 @@
+/* Tkinter Root Window Custom Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica", "Arial", sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        /* Gold Header (#d4af37) */
+        header {
+            background-color: #d4af37;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        header h1 {
+            color: #000000;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Main Container Frame */
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+            gap: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Group Boxes styling (replicates tk.LabelFrame) */
+        .group-box {
+            border: 2px solid #d4af37;
+            border-radius: 6px;
+            padding: 20px;
+            position: relative;
+            background-color: #1a1a1a;
+            margin-bottom: 15px;
+        }
+
+        .group-box-title {
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background-color: #1a1a1a;
+            padding: 0 10px;
+            color: #d4af37;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Left Panel: Client Selection */
+        .left-panel {
+            width: 300px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 450px;
+        }
+
+        .select-label {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        /* Combobox Dropdown Style */
+        .combobox {
+            width: 100%;
+            padding: 10px;
+            background-color: #333333;
+            color: #ffffff;
+            border: 1px solid #555555;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .combobox:focus {
+            outline: none;
+            border-color: #d4af37;
+        }
+
+        /* Courier Metrics Summary Box */
+        .metrics-summary {
+            background-color: #333333;
+            color: #dddddd;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 13px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-line;
+            line-height: 1.6;
+            margin-top: auto;
+        }
+
+        /* Right Panel: Content Containers */
+        .right-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .right-panel .group-box {
+            flex: 1;
+            min-height: 180px;
+        }
+
+        .display-label {
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: #ffffff;
+            margin-top: 10px;
+        }
+        
+        .error-message {
+            color: #ff4a4a;
+        }

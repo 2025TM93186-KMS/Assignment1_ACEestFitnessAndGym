@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACEest Functional Fitness</title>
+     <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <h1>ACEest FUNCTIONAL FITNESS</h1>
+    </header>
+
+    <!-- Main Container Layout -->
+    <div class="main-container">
+        
+        <!-- Left Panel: Client Selection -->
+        <aside class="left-panel">
+            <div class="group-box" style="flex-grow: 1; display: flex; flex-direction: column;">
+                <span class="group-box-title"> Client Profile </span>
+                
+                <label class="select-label" for="my-combobox">Select Program:</label>
+                <!-- Combobox element calling dynamic fetch logic on selection change -->
+                <select id="my-combobox" class="combobox" name="program" required onchange="updateDisplay(this.value)">
+                    <option value="" disabled selected>Loading programs...</option>
+                </select>
+
+                <!-- Site Metrics Summary -->
+                <div class="metrics-summary">CAPACITY: 150 Users
+AREA: 10,000 sq ft
+BREAK-EVEN: 250 Members</div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Display Charts -->
+        <main class="right-panel">
+            
+            <!-- Weekly Workout Chart Display Box -->
+            <div class="group-box">
+                <span class="group-box-title" style="font-size: 16px;"> Weekly Workout Chart </span>
+                <div id="work-label" class="display-label">Select a profile to view workout</div>
+            </div>
+
+            <!-- Diet Chart Display Box (Tamil Nadu Context) -->
+            <div class="group-box">
+                <span class="group-box-title" style="font-size: 16px;"> Daily Nutrition Plan (Tamil Nadu Context) </span>
+                <div id="diet-label" class="display-label">Select a profile to view diet</div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Interface Logic Framework -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Step 1: Initialise the Combobox with the dynamic plan list on load
+            fetch("/api/v1.0/programs") 
+                .then(response => response.json())
+                .then(data => {
+                    const combobox = document.getElementById("my-combobox");
+                    combobox.innerHTML = '<option value="" disabled selected>-- Select a program --</option>';
+                    
+                    // Accept structured dictionary data {"programs": [...]} or pure string arrays [...]
+                    const programList = data.programs || data;
+                    
+                    programList.forEach(program => {
+                        const option = document.createElement("option");
+                        option.value = program;
+                        option.textContent = program;
+                        combobox.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error("Initial load error:", error);
+                    document.getElementById("my-combobox").innerHTML = '<option value="" disabled>Error loading profiles</option>';
+                });
+        });
+
+        // Step 2: Corresponds to Tkinter's 'update_display' method
+        function updateDisplay(selectedProgram) {
+            if (!selectedProgram) return;
+
+            const workLabel = document.getElementById("work-label");
+            const dietLabel = document.getElementById("diet-label");
+
+            workLabel.innerText = "Loading workout content...";
+            dietLabel.innerText = "Loading meal plan specifications...";
+            workLabel.style.color = "#ffffff"; // Reset style temporarily
+
+            // Dispatches user selection state back to Python API route
+            fetch(`/api/v1.0/entire_plan?program_name=${encodeURIComponent(selectedProgram)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Server metrics collection rejected");
+                    return response.json();
+                })
+                .then(data => {
+                    /* 
+                       Assumed JSON mapping return structure from your Python backend:
+                       {
+                          "workout": "Day 1: Kettlebell Swings...",
+                          "color": "#d4af37",
+                          "diet": "Breakfast: Idli/Dosa with Sambar..."
+                       }
+                    */
+                    workLabel.innerText = data.weekly_workout_chart || "No routine defined.";
+                    workLabel.style.color = data.ui_color || "#ffffff"; // Updates specific UI text color dynamically
+                    
+                    dietLabel.innerText = data.daily_nutrition_plan || "No diet defined.";
+                })
+                .catch(error => {
+                    console.error("Selection update failure:", error);
+                    workLabel.innerText = "Failed to pull system profiles.";
+                    workLabel.className = "display-label error-message";
+                    dietLabel.innerText = "Failed to pull nutrition metrics.";
+                    dietLabel.className = "display-label error-message";
+                });
+        }
+    </script>
+</body>
+</html>
