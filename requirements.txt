@@ -1,0 +1,4 @@
+Flask
+pytest
+flask_cors
+
