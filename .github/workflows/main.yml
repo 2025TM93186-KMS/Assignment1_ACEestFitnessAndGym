@@ -2,9 +2,9 @@ name: ACEest Core Automation Engine V1.0
 
 on:
   push:
-    branches: [ "main", "Develop", "Aceestver-1.0" ]
+    branches: [ "main", "Develop", "Test", "Stage" ]
   pull_request:
-    branches: [ "main", "Develop" ]
+    branches: [ "main", "Develop", "Test", "Stage" ]
 
 jobs:
   continuous-integration-pipeline:
