@@ -163,7 +163,7 @@ def save_client():
         calories = int(weight * program["calorie_factor"]) if weight > 0 else 0
 
         return jsonify({
-            "success": f"Client '{name}' validated and processed successfully.",
+            "success": f"Client '{name}' saved successfully.",
             "adherence": target_adherence,
             "calculated_calories": calories
         }), 200
