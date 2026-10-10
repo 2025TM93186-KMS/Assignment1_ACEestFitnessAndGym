@@ -6,3 +6,6 @@ __pycache__/
 app.py.save
 myenv/
 .idea/
+*.db
+*.xml
+.idea/dbnavigator.xml

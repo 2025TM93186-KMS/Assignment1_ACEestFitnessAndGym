@@ -43,7 +43,7 @@
 
                 <div class="input-group">
                     <label class="select-label" for="my-combobox">Program</label>
-                    <select id="my-combobox" class="combobox" name="program" onchange="updateProgram(this.value)">
+                    <select id="my-combobox" class="combobox" name="program">
                         <option value="" selected>-- Select a program --</option>
                         <option value="Fat Loss (FL)">Fat Loss (FL)</option>
                         <option value="Muscle Gain (MG)">Muscle Gain (MG)</option>
@@ -56,16 +56,11 @@
                     <input type="range" id="adherence-slider" min="0" max="100" value="0" oninput="document.getElementById('adherence-val').innerText = this.value">
                 </div>
 
-                <div class="input-group">
-                    <label for="client-notes">Coach Notes</label>
-                    <input type="text" id="client-notes" autocomplete="off">
-                </div>
-
                 <!-- Interface Control Buttons -->
                 <div class="button-group">
                     <button type="button" class="btn btn-save" onclick="saveClient()">Save Client</button>
-                    <button type="button" class="btn btn-export" onclick="exportCSV()">Export CSV</button>
-                    <button type="button" class="btn btn-reset" onclick="resetForm()">Reset</button>
+                    <button type="button" class="btn btn-export" onclick="loadClient()">Load Client</button>
+                    <button type="button" class="btn btn-reset" onclick="saveProgress()">Save Progress</button>
                 </div>
             </form>
         </aside>
@@ -80,43 +75,16 @@
             </div>
 
             <!-- Diet Chart Display Box (Tamil Nadu Context) -->
-            <div class="group-box text-block-frame">
-                <span class="group-box-title"> Nutrition Plan </span>
-                <div id="diet-label" class="scrollable-block">—</div>
-            </div>
+
 
             <!-- Dynamic Live Calorie Output Label -->
-            <div id="calorie-label" class="calorie-display">Estimated Calories: --</div>
+
 
             <!-- CLIENT LIST TABLE -->
-            <div class="group-box table-frame">
-                <span class="group-box-title"> Client List </span>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Age</th>
-                                <th>Weight</th>
-                                <th>Program</th>
-                                <th>Adherence</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody id="client-table-body">
-                            <!-- Rows dynamically populated locally -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+
 
             <!-- PROGRESS CHART -->
-            <div class="group-box chart-frame">
-                <span class="group-box-title"> Progress Chart </span>
-                <div class="canvas-wrapper" style="position: relative; height:200px; width:100%;">
-                    <canvas id="progress-chart"></canvas>
-                </div>
-            </div>
+
 
         </main>
     </div>
@@ -125,96 +93,19 @@
     <script>
         // Local state storage array to keep records in memory matching Python lists
         const clients = [];
-        let chartInstance = null;
+
 
         // Equivalent map configuration block directly matching self.programs data structure
         const programs = {
-            "Fat Loss (FL)": {
-                "workout": "Back Squat, Cardio, Bench, Deadlift, Recovery",
-                "diet": "Egg Whites, Chicken, Fish Curry",
-                "color": "#e74c3c",
-                "calorie_factor": 22
-            },
-            "Muscle Gain (MG)": {
-                "workout": "Squat, Bench, Deadlift, Press, Rows",
-                "diet": "Eggs, Biryani, Mutton Curry",
-                "color": "#2ecc71",
-                "calorie_factor": 35
-            },
-            "Beginner (BG)": {
-                "workout": "Air Squats, Ring Rows, Push-ups",
-                "diet": "Balanced Tamil Meals",
-                "color": "#3498db",
-                "calorie_factor": 26
-            }
+            "Fat Loss (FL)": {"factor": 22},
+            "Muscle Gain (MG)": {"factor": 35},
+            "Beginner (BG)": {"factor": 26}
         };
 
         document.addEventListener("DOMContentLoaded", function() {
-            initializeChart();
+
         });
 
-        // Corresponds to Tkinter's 'update_program' method
-        function updateProgram(selectedProgram) {
-            const workLabel = document.getElementById("work-label");
-            const dietLabel = document.getElementById("diet-label");
-
-            if (!selectedProgram) {
-                workLabel.innerText = "—";
-                workLabel.style.color = "#ffffff";
-                dietLabel.innerText = "—";
-                calculateCalories();
-                return;
-            }
-
-            const data = programs[selectedProgram];
-            workLabel.innerText = data.workout;
-            workLabel.style.color = data.color;
-            dietLabel.innerText = data.diet;
-            dietLabel.style.color = "white";
-
-            calculateCalories();
-        }
-
-        // Live calculation matching target weight updates on input
-        function calculateCalories() {
-            const program = document.getElementById("my-combobox").value;
-            const weightInput = document.getElementById("client-weight").value;
-            const label = document.getElementById("calorie-label");
-
-            if (!program) {
-                label.innerText = "Estimated Calories: --";
-                return;
-            }
-
-            const payload = {
-                name: name,
-                age: age,
-                weight: weight,
-                program: program,
-                progress: adherence // Maps cleanly to data.get("progress") in Python
-            };
-            fetch(`/api/v1.1/calculate_calories`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Calorie calculation request failed");
-                return response.json();
-            })
-            .then(data => {
-                const totalCalories = data.calories;
-                label.innerText = `Estimated Calories: ${totalCalories} kcal`;
-            })
-            .catch(error => {
-                console.error("Calorie calculation error:", error);
-                label.innerText = "Estimated Calories: --";
-            });
-
-
-        }
 
         // Corresponds to Tkinter's 'save_client' method
         function saveClient() {
@@ -223,7 +114,7 @@
             const ageInput = document.getElementById("client-age").value;
             const weightInput = document.getElementById("client-weight").value;
             const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
-            const notes = document.getElementById("client-notes").value.trim();
+
 
             if (!name || !program) {
                 alert("Please fill client name and program.");
@@ -237,45 +128,15 @@
                 if (isNaN(age) || isNaN(weight)) {
                     throw new Error();
                 }
-            } catch (e) {
-                alert("Age must be an integer and Weight must be a number.");
-                return;
-            }
-
-            //const client = [name, age, weight, program, adherence, notes];
-            //clients.push(client);
-
-             const payload = {
+                const payload = {
                 name: name,
                 age: age,
                 weight: weight,
                 program: program,
-                progress: adherence,
-                notes: notes
-            };
-            const label = document.getElementById("calorie-label");
-            fetch(`/api/v1.1/calculate_calories`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Calorie calculation request failed");
-                return response.json();
-            })
-            .then(data => {
-                const totalCalories = data.calories;
-                label.innerText = `Estimated Calories: ${totalCalories} kcal`;
-            })
-            .catch(error => {
-                console.error("Calorie calculation error:", error);
-                label.innerText = "Estimated Calories: --";
-            });
+                progress: adherence
+                };
 
-
-            fetch('/api/v1.1/save_client', {
+            fetch('/api/client', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -290,217 +151,118 @@
             })
             .then(data => {
                 // 4. Pop standard alert using the exact processing string returned from Python
-                alert(`${data.success}\nAdherence level: ${data.adherence}%\nEstimated Calories: ${data.calculated_calories} kcal`);
+                // alert(`${data.success}\nAdherence level: ${data.adherence}%\nEstimated Calories: ${data.calculated_calories} kcal`);
+                alert(data.message)
             })
             .catch(error => {
                 console.error("Save Client Error:", error);
                 alert(`Error: ${error.message}`);
             });
 
-
-            // Add dynamic table row layout instantly
-            const tableBody = document.getElementById("client-table-body");
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${name}</td>
-                <td>${age}</td>
-                <td>${weight}</td>
-                <td>${program}</td>
-                <td>${adherence}%</td>
-                <td>${notes || '—'}</td>
-            `;
-            tableBody.appendChild(tr);
-
-            alert(data.message);
-            updateChartData();
+            } catch (e) {
+                alert(e);
+                return;
+            }
         }
 
-        function updateChart() {
-            if (!chartInstance) return;
-            chartInstance.data.labels = clientDataset.map(c => c.name);
-            chartInstance.data.datasets[0].data = clientDataset.map(c => c.adherence);
-            chartInstance.update();
+        function loadClient(){
+            try{
+
+            const name = document.getElementById("client-name").value.trim();
+
+            fetch('/api/client?name=' + encodeURIComponent(name), {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || "Server validation rejected");
+                    });
+                }
+                return response.json(); // Extracts raw data into JSON mapping structures
+            })
+            .then(data => {
+                console.log("Client payload safely fetched:", data);
+
+                if (data) {
+                    document.getElementById("my-combobox").value = data.program || "";
+                    document.getElementById("client-age").value = data.age || "0";
+                    document.getElementById("client-weight").value = data.weight || "0.0";
+
+                    // Update slider track view nodes if present in your markup
+                    if (document.getElementById("adherence-slider")) {
+                        document.getElementById("adherence-slider").value = parseInt(data.progress) || 0;
+                        document.getElementById("adherence-val").innerText = data.progress || 0;
+                    }
+
+                    // Trigger workout plan updates instantly to match your selector dropdown selection
+                    if (typeof updateProgram === "function") {
+                        updateProgram(data.program);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error("Load Client Error:", error);
+                alert(`Error: ${error.message}`);
+            });
+
+
+            }
+            catch (e) {
+                alert(e);
+                return;
+            }
+
         }
 
-        async function exportCSV() {
-        // 1. Grab the client name element and validate it
-        const clientNameInput = document.getElementById("client-name");
-        if (!clientNameInput || !clientNameInput.value.trim()) {
-            alert("Please enter a client name.");
-            return;
-        }
-        const clientName = clientNameInput.value.trim();
+        function saveProgress(){
+            try {
+            const name = document.getElementById("client-name").value.trim();
+            const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
+            const payload = {
+                name: name,
+                adherence: adherence
+                };
 
-        // --- FIX: Query and extract the rest of your form variables ---
-        // Ensure these element IDs match whatever you named them in your HTML
-        const ageValue = document.getElementById("client-age")?.value.trim() || "";
-        const weightValue = document.getElementById("client-weight")?.value.trim() || "";
-        const programValue = document.getElementById("client-program")?.value.trim() || "";
-        const adherenceValue = document.getElementById("client-adherence")?.value.trim() || "";
-        const notesValue = document.getElementById("client-notes")?.value.trim() || "";
-
-        // 2. Build payload using the verified extracted variables
-        const payload = {
-            name: clientName,
-            age: ageValue,
-            weight: weightValue,
-            program: programValue,
-            progress: adherenceValue,
-            notes: notesValue
-        };
-
-        // 3. Build your URL exactly how Postman runs it
-        const targetUrl = '/api/v1.1.2/export_csv?name=' + encodeURIComponent(clientName) + '&filename=' + encodeURIComponent(clientName + '.csv');
-
-        try {
-            // 4. Trigger file picker IMMEDIATELY on click to satisfy browser security
-            const options = {
-                suggestedName: `${clientName}.csv`,
-                types: [{
-                    description: 'CSV Files',
-                    accept: { 'text/csv': ['.csv'] }
-                }],
-            };
-            const handle = await window.showSaveFilePicker(options);
-
-            // 5. Hit the working backend endpoint
-            const response = await fetch(targetUrl, {
+            fetch('/api/progress', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.error || "Server validation rejected"); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // alert(`${data.success}\nAdherence level: ${data.adherence}%\nEstimated Calories: ${data.calculated_calories} kcal`);
+                alert(data.message)
+            })
+            .catch(error => {
+                console.error("Save Client Error:", error);
+                alert(`Error: ${error.message}`);
             });
 
-            if (!response.ok) {
-                const errorMsg = await response.json().catch(() => ({ error: "Server rejected request" }));
-                throw new Error(errorMsg.error || `HTTP ${response.status}`);
             }
-
-            // 6. Consume data payload stream natively
-            const blobData = await response.blob();
-
-            // 7. Push binary array into the native filesystem layer
-            const writable = await handle.createWritable();
-            await writable.write(blobData);
-            await writable.close();
-
-            alert('File Saved Successfully!');
-
-        } catch (err) {
-            // Suppress alert if user hit 'Cancel' in the file dialog
-            if (err.name !== 'AbortError') {
-                console.error("Index Page Sync Error:", err);
-                alert("Export Failed: " + err.message);
+            catch (e) {
+                alert(e);
+                return;
             }
         }
-    }
-
-        function resetForm() {
-    // 1. Dispatch the request to the correct v1.1 endpoint defined in your app.py
-        fetch("/api/v1.1/reset")
-        .then(response => {
-            if (!response.ok) throw new Error("Reset operation failed");
-            return response.json();
-        })
-        .then(data => {
-            console.log("Form reset successful:", data);
-
-            // FIX: All UI manipulation using 'data' MUST happen inside this block!
-            document.getElementById("client-name").value = data.name || "";
-            document.getElementById("client-age").value = data.age || "0";
-            document.getElementById("client-weight").value = data.weight || "0";
-            document.getElementById("my-combobox").value = data.program || "";
-            document.getElementById("adherence-slider").value = data.adherence || "0";
-            document.getElementById("adherence-val").innerText = data.adherence || "0";
-
-            const workLabel = document.getElementById("work-label");
-            const dietLabel = document.getElementById("diet-label");
-
-            workLabel.innerText = data.weekly_workout_chart || "";
-            workLabel.style.color = "#ffffff";
-            dietLabel.innerText = data.daily_nutrition_plan || "";
-
-            // Matches data.total_calories precisely with your Python reset dictionary keys
-            document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
-
-            currentCalorieFactor = 0;
-        })
-        .catch(error => {
-            console.error("Form reset error:", error);
-
-            // Fallback: Clear the inputs client-side anyway even if the network fails
-            document.getElementById("client-form").reset();
-            document.getElementById("adherence-val").innerText = data.adherence || "0";
-            document.getElementById("work-label").innerText = data.weekly_workout_chart ||"";
-            document.getElementById("work-label").style.color = "#ffffff";
-            document.getElementById("diet-label").innerText = data.daily_nutrition_plan ||"";
-            document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
-        });
-        }
 
 
-        //////////// Charts
-        function initializeChart() {
-        const ctx = document.getElementById('progress-chart').getContext('2d');
-
-        chartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Adherence %',
-                    data: [],
-                    backgroundColor: '#d4af37', // Gold bar profiles matching your theme
-                    borderColor: '#b89324',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: { color: 'rgba(212, 175, 55, 0.12)' }, // Transparent gold grid wires
-                        ticks: { color: '#d4af37' } // Gold numerical scales
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#d4af37' } // Gold text metrics
-                    }
-                }
-                }
-            });
-        }
 
 
-        // REPLACES: self.canvas.draw() / self.ax.clear() from Tkinter
-        function updateChartData() {
-            if (!chartInstance) return;
 
-            // 1. Map values directly out of your local array memory matching Python loops
-            const names = clients.map(c => c.name);
-            const adherence = clients.map(c => c.adherence);
 
-            // 2. Handle empty state views gracefully
-            if (names.length === 0) {
-                chartInstance.data.labels = ["No Saved Data"];
-                chartInstance.data.datasets[0].data = []; // Target the first dataset array index
-            } else {
-                // 3. Bind the fresh data directly to the active canvas parameters
-                chartInstance.data.labels = names;
-                chartInstance.data.datasets[0].data = adherence; // FIX: Added [0] index accessor
-            }
 
-            // 4. Trigger the layout canvas to smoothly re-paint the new bars
-            chartInstance.update();
-        }
+
+
+
+
 
 
 
@@ -508,4 +270,3 @@
      </script>
 </body>
 </html>
-
