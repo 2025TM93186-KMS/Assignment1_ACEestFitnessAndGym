@@ -265,26 +265,43 @@ def get_clients():
     return jsonify({"clients": CLIENTS_DB}), 200
 
 """Dynamically generated CSV text object"""
-@app.route("/api/v1.1.2/export_csv", methods=["GET"])
+
+
+@app.route("/api/v1.1.2/export_csv", methods=["POST"])
 def export_csv():
-    if not CLIENTS_DB:
-        return jsonify({"error": "No clients to export."}), 400
     name = request.args.get("name")
+    client = next((c for c in CLIENTS_DB if c['name'].lower() == name.lower()), None)
+    if not CLIENTS_DB or not client:
+        #return jsonify({"error": "No clients to export."}), 400
+        data = request.json or {}
+        if data:
+            client = {
+                "name": data.get("name"),
+                "age": data.get("age"),
+                "weight": data.get("weight"),
+                "program": data.get("program"),
+                "adherence": data.get("adherence"),
+                "notes": data.get("notes")
+            }
+
     if not name:
         return jsonify({"error": "Missing required 'name' query parameter"}), 400
-    client = next((c for c in CLIENTS_DB if c['name'].lower() == name.lower()), None)
+
     if not client:
         return jsonify({"error": f"Client '{name}' not found."}), 404
-    filename = "aceest_clients.csv" if not request.args.get("filename") else request.args.get("filename")
+
+    filename = request.args.get("filename") or "aceest_clients.csv"
+
+
     si = io.StringIO()
     cw = csv.writer(si)
     cw.writerow(["Name", "Age", "Weight", "Program", "Adherence", "Notes"])
 
-    #for client in CLIENTS_DB:
-    #    cw.writerow([
-    #        client["name"], client["age"], client["weight"],
-    #        client["program"], client["adherence"], client["notes"]
-    #    ])
+    """for client in CLIENTS_DB:
+        cw.writerow([
+            client["name"], client["age"], client["weight"],
+            client["program"], client["adherence"], client["notes"]
+        ])"""
     cw.writerow([
         client["name"], client["age"], client["weight"],
         client["program"], client["adherence"], client["notes"]
@@ -293,9 +310,11 @@ def export_csv():
     output = si.getvalue()
     return Response(
         output,
+        status=200,
         mimetype="text/csv",
         headers={"Content-disposition": f"attachment; filename={filename}"}
     )
+
 
 @app.route("/api/v1.1.2/clear_clients", methods=["POST"])
 def clear_clients():

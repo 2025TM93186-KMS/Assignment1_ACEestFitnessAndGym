@@ -248,7 +248,8 @@
                 age: age,
                 weight: weight,
                 program: program,
-                progress: adherence // Maps cleanly to data.get("progress") in Python
+                progress: adherence,
+                notes: notes
             };
 
             fetch('/api/v1.1/save_client', {
@@ -293,27 +294,85 @@
 
         function updateChart() {
             if (!chartInstance) return;
-            fetch(`/api/v1.1.2/client?name=${encodeURIComponent(document.getElementById("client-name").value.trim())}`)
-                .then(response => {
-                    if (!response.ok) throw new Error("Failed to fetch client data for chart");
-                    return response.json();
-                })
-                .then(data => {
-                    const clientDataset = data.client ? [data.client] : [];
-                })
-                .catch(error => {
-                    console.error("Chart Update Error:", error);
-                });
             chartInstance.data.labels = clientDataset.map(c => c.name);
             chartInstance.data.datasets[0].data = clientDataset.map(c => c.adherence);
             chartInstance.update();
         }
 
-
-        function exportCSV() {
-        alert('Exporting...');
-
+        async function exportCSV() {
+        // 1. Grab the client name element and validate it
+        const clientNameInput = document.getElementById("client-name");
+        if (!clientNameInput || !clientNameInput.value.trim()) {
+            alert("Please enter a client name.");
+            return;
         }
+        const clientName = clientNameInput.value.trim();
+
+        // --- FIX: Query and extract the rest of your form variables ---
+        // Ensure these element IDs match whatever you named them in your HTML
+        const ageValue = document.getElementById("client-age")?.value.trim() || "";
+        const weightValue = document.getElementById("client-weight")?.value.trim() || "";
+        const programValue = document.getElementById("client-program")?.value.trim() || "";
+        const adherenceValue = document.getElementById("client-adherence")?.value.trim() || "";
+        const notesValue = document.getElementById("client-notes")?.value.trim() || "";
+
+        // 2. Build payload using the verified extracted variables
+        const payload = {
+            name: clientName,
+            age: ageValue,
+            weight: weightValue,
+            program: programValue,
+            progress: adherenceValue,
+            notes: notesValue
+        };
+
+        // 3. Build your URL exactly how Postman runs it
+        const targetUrl = '/api/v1.1.2/export_csv?name=' + encodeURIComponent(clientName) + '&filename=' + encodeURIComponent(clientName + '.csv');
+
+        try {
+            // 4. Trigger file picker IMMEDIATELY on click to satisfy browser security
+            const options = {
+                suggestedName: `${clientName}.csv`,
+                types: [{
+                    description: 'CSV Files',
+                    accept: { 'text/csv': ['.csv'] }
+                }],
+            };
+            const handle = await window.showSaveFilePicker(options);
+
+            // 5. Hit the working backend endpoint
+            const response = await fetch(targetUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorMsg = await response.json().catch(() => ({ error: "Server rejected request" }));
+                throw new Error(errorMsg.error || `HTTP ${response.status}`);
+            }
+
+            // 6. Consume data payload stream natively
+            const blobData = await response.blob();
+
+            // 7. Push binary array into the native filesystem layer
+            const writable = await handle.createWritable();
+            await writable.write(blobData);
+            await writable.close();
+
+            alert('File Saved Successfully!');
+
+        } catch (err) {
+            // Suppress alert if user hit 'Cancel' in the file dialog
+            if (err.name !== 'AbortError') {
+                console.error("Index Page Sync Error:", err);
+                alert("Export Failed: " + err.message);
+            }
+        }
+    }
+
      </script>
 </body>
 </html>
