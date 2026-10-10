@@ -75,14 +75,19 @@ def api_root():
         "service": "ACEest Fitness Foundation Engine",        
         "available_endpoints": {
             "programs": "GET /api/v1.0/programs",
-            "health": "GET /api/v1.0/health",
+            "health_v1_0": "GET /api/v1.0/health",
             "entire_plan": "GET /api/v1.0/entire_plan",
+            "health": "GET /api/v1.1/health",
             "calculate_calories": "POST /api/v1.1/calculate_calories",
             "save_client": "POST /api/v1.1/save_client"
         }
     }), 200
 
 """Health Check"""
+@app.route("/api/v1.0/health", methods=["GET"])
+def health_check_v1_0():
+    return jsonify({"status": "healthy", "service": "ACEest Fitness API V1.0 Backend"}), 200
+
 @app.route("/api/v1.1/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "healthy", "service": "ACEest Fitness API V1.1 Backend"}), 200

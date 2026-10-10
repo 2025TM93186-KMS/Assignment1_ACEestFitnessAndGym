@@ -35,7 +35,7 @@
                 <div class="input-group">
                     <label for="client-weight">Weight (kg)</label>
                     <!-- Listens to biometric keystrokes for active calorie math updates -->
-                    <input type="number" id="client-weight" value="0" min="0" step="0.1" oninput="calculateCalories()">
+                    <input type="number" id="client-weight" value="0" min="0" step="0.1">
                 </div>
 
                 <div class="input-group">
@@ -145,31 +145,45 @@
 
         // Step 3: Implements weight-based calorie calculations instantly
         function calculateCalories() {
-            //const weight = parseFloat(document.getElementById("client-weight").value) || 0;
-            //const label = document.getElementById("calorie-label");
+            const name = document.getElementById("client-name").value.trim();
+            const age = parseInt(document.getElementById("client-age").value) || 0;
+            const weight = parseFloat(document.getElementById("client-weight").value) || 0;
+            const program = document.getElementById("my-combobox").value;
+            const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
 
-            fetch(`/api/v1.1/calculate_calories?program=${encodeURIComponent(document.getElementById("my-combobox").value)}`)
-                .then(response => {
-                    if (!response.ok) throw new Error("Calorie calculation request failed");
-                    return response.json();
-                })
-                .then(data => {
-                    const totalCalories = data.calories;
-                    label.innerText = `Estimated Calories: ${totalCalories} kcal`;
-                })
-                .catch(error => {
-                    console.error("Calorie calculation error:", error);
-                    label.innerText = "Estimated Calories: --";
-                });
+            // 1. Client-side validation block
+            if (!name || !program) {
+                alert("Please fill client name and program.");
+                return;
+            }
+                       
+            const label = document.getElementById("calorie-label");
 
-            
+            const payload = {
+                name: name,
+                weight: weight,
+                program: program
+            };
+            fetch(`/api/v1.1/calculate_calories`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Calorie calculation request failed");
+                return response.json();
+            })
+            .then(data => {
+                const totalCalories = data.calories;
+                label.innerText = `Estimated Calories: ${totalCalories} kcal`;
+            })
+            .catch(error => {
+                console.error("Calorie calculation error:", error);
+                label.innerText = "Estimated Calories: --";
+            });
 
-            // if (weight > 0 && currentCalorieFactor > 0) {
-            //     const totalCalories = Math.round(weight * currentCalorieFactor);
-            //     label.innerText = `Estimated Calories: ${totalCalories} kcal`;
-            // } else {
-            //     label.innerText = "Estimated Calories: --";
-            // }
         }
 
         // Step 4: Handles profile data validation notifications
@@ -194,6 +208,27 @@
                 program: program,
                 progress: adherence // Maps cleanly to data.get("progress") in Python
             };
+
+            const label = document.getElementById("calorie-label");
+            fetch(`/api/v1.1/calculate_calories`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Calorie calculation request failed");
+                return response.json();
+            })
+            .then(data => {
+                const totalCalories = data.calories;
+                label.innerText = `Estimated Calories: ${totalCalories} kcal`;
+            })
+            .catch(error => {
+                console.error("Calorie calculation error:", error);
+                label.innerText = "Estimated Calories: --";
+            });
 
             // 3. Dispatch POST request to the correct v1.1 API endpoint
             fetch('/api/v1.1/save_client', {
