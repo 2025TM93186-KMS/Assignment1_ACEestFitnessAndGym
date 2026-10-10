@@ -5,43 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACEest Functional Fitness</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Chart.js for rendering the Progress Chart natively -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body>
 
-    <!-- Header -->
+    <!-- Header Block -->
     <header>
-        <h1>ACEest FUNCTIONAL FITNESS SYSTEM</h1>
+        <h1>ACEest FUNCTIONAL FITNESS SYSTEM v2</h1>
     </header>
 
     <!-- Main Container Layout -->
     <div class="main-container">
-        
+
         <!-- Left Panel: Client Profile Form -->
         <aside class="left-panel">
             <form id="client-form" class="group-box" onsubmit="event.preventDefault();">
                 <span class="group-box-title"> Client Profile </span>
-                
+
                 <!-- Client Input Elements -->
                 <div class="input-group">
                     <label for="client-name">Name</label>
-                    <input type="text" id="client-name" placeholder="Enter client name" required>
+                    <input type="text" id="client-name" autocomplete="off">
                 </div>
 
                 <div class="input-group">
                     <label for="client-age">Age</label>
-                    <input type="number" id="client-age" value="0" min="0">
+                    <input type="text" id="client-age" value="0">
                 </div>
 
                 <div class="input-group">
                     <label for="client-weight">Weight (kg)</label>
-                    <!-- Listens to biometric keystrokes for active calorie math updates -->
-                    <input type="number" id="client-weight" value="0" min="0" step="0.1">
+                    <input type="text" id="client-weight" value="0.0">
                 </div>
 
                 <div class="input-group">
                     <label class="select-label" for="my-combobox">Program</label>
-                    <select id="my-combobox" class="combobox" name="program" required onchange="updateDisplay(this.value)">
-                        <option value="" disabled selected>Loading programs...</option>
+                    <select id="my-combobox" class="combobox" name="program" onchange="updateProgram(this.value)">
+                        <option value="" selected>-- Select a program --</option>
+                        <option value="Fat Loss (FL)">Fat Loss (FL)</option>
+                        <option value="Muscle Gain (MG)">Muscle Gain (MG)</option>
+                        <option value="Beginner (BG)">Beginner (BG)</option>
                     </select>
                 </div>
 
@@ -50,157 +54,136 @@
                     <input type="range" id="adherence-slider" min="0" max="100" value="0" oninput="document.getElementById('adherence-val').innerText = this.value">
                 </div>
 
+                <div class="input-group">
+                    <label for="client-notes">Coach Notes</label>
+                    <input type="text" id="client-notes" autocomplete="off">
+                </div>
+
                 <!-- Interface Control Buttons -->
                 <div class="button-group">
                     <button type="button" class="btn btn-save" onclick="saveClient()">Save Client</button>
+                    <button type="button" class="btn btn-export" onclick="exportCSV()">Export CSV</button>
                     <button type="button" class="btn btn-reset" onclick="resetForm()">Reset</button>
                 </div>
-
-                
             </form>
         </aside>
 
-        <!-- Right Panel: Display Charts -->
+        <!-- Right Panel: Display Elements, Tables, and Charts -->
         <main class="right-panel">
-            
+
             <!-- Weekly Workout Chart Display Box -->
             <div class="group-box text-block-frame">
                 <span class="group-box-title"> Weekly Training Plan </span>
-                <div id="work-label" class="scrollable-block"></div>
+                <div id="work-label" class="scrollable-block">—</div>
             </div>
 
             <!-- Diet Chart Display Box (Tamil Nadu Context) -->
             <div class="group-box text-block-frame">
-                <span class="group-box-title"> Nutrition Plan (TN Context) </span>
-                <div id="diet-label" class="scrollable-block"></div>
+                <span class="group-box-title"> Nutrition Plan </span>
+                <div id="diet-label" class="scrollable-block">—</div>
             </div>
 
             <!-- Dynamic Live Calorie Output Label -->
             <div id="calorie-label" class="calorie-display">Estimated Calories: --</div>
+
+            <!-- CLIENT LIST TABLE -->
+            <div class="group-box table-frame">
+                <span class="group-box-title"> Client List </span>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Weight</th>
+                                <th>Program</th>
+                                <th>Adherence</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="client-table-body">
+                            <!-- Rows dynamically populated locally -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PROGRESS CHART -->
+            <div class="group-box chart-frame">
+                <span class="group-box-title"> Progress Chart </span>
+                <div class="canvas-wrapper" style="position: relative; height:200px; width:100%;">
+                    <canvas id="progress-chart"></canvas>
+                </div>
+            </div>
 
         </main>
     </div>
 
     <!-- Interface Logic Framework -->
     <script>
-        // Globally cached tracking reference for user calculation variables
-        let currentCalorieFactor = 0;
+        // Local state storage array to keep records in memory matching Python lists
+        const clients = [];
+        let chartInstance = null;
+
+        // Equivalent map configuration block directly matching self.programs data structure
+        const programs = {
+            "Fat Loss (FL)": {
+                "workout": "Back Squat, Cardio, Bench, Deadlift, Recovery",
+                "diet": "Egg Whites, Chicken, Fish Curry",
+                "color": "#e74c3c",
+                "calorie_factor": 22
+            },
+            "Muscle Gain (MG)": {
+                "workout": "Squat, Bench, Deadlift, Press, Rows",
+                "diet": "Eggs, Biryani, Mutton Curry",
+                "color": "#2ecc71",
+                "calorie_factor": 35
+            },
+            "Beginner (BG)": {
+                "workout": "Air Squats, Ring Rows, Push-ups",
+                "diet": "Balanced Tamil Meals",
+                "color": "#3498db",
+                "calorie_factor": 26
+            }
+        };
 
         document.addEventListener("DOMContentLoaded", function() {
-            // Step 1: Initialise the Combobox with the dynamic plan list on load
-            fetch("/api/v1.0/programs") 
-                .then(response => response.json())
-                .then(data => {
-                    const combobox = document.getElementById("my-combobox");
-                    combobox.innerHTML = '<option value="" disabled selected>-- Select a program --</option>';
-                    
-                    const programList = data.programs || data;
-                    
-                    programList.forEach(program => {
-                        const option = document.createElement("option");
-                        option.value = program;
-                        option.textContent = program;
-                        combobox.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error("Initial load error:", error);
-                    document.getElementById("my-combobox").innerHTML = '<option value="" disabled>Error loading profiles</option>';
-                });
+            //initChart();
         });
 
-        // Step 2: Corresponds to Tkinter's 'update_display' / 'update_program' method
-        function updateDisplay(selectedProgram) {
-            if (!selectedProgram) return;
-
+        // Corresponds to Tkinter's 'update_program' method
+        function updateProgram(selectedProgram) {
             const workLabel = document.getElementById("work-label");
             const dietLabel = document.getElementById("diet-label");
 
-            workLabel.innerText = "Loading workout content...";
-            dietLabel.innerText = "Loading meal plan specifications...";
-            workLabel.style.color = "#ffffff"; 
-
-            // Dispatches user selection state back to Python API route
-            fetch(`/api/v1.0/entire_plan?program_name=${encodeURIComponent(selectedProgram)}`)
-                .then(response => {
-                    if (!response.ok) throw new Error("Server metrics collection rejected");
-                    return response.json();
-                })
-                .then(data => {
-                    // Update text blocks with explicit backend parameter names
-                    workLabel.innerText = data.weekly_workout_chart || "No routine defined.";
-                    workLabel.style.color = data.ui_color || "#ffffff"; 
-                    dietLabel.innerText = data.daily_nutrition_plan || "No diet defined.";
-                    
-                    // Cache the calculation variable and execute fresh calorie evaluations
-                    currentCalorieFactor = data.calorie_factor || 0;
-                    calculateCalories();
-                })
-                .catch(error => {
-                    console.error("Selection update failure:", error);
-                    workLabel.innerText = "Failed to pull system profiles.";
-                    dietLabel.innerText = "Failed to pull nutrition metrics.";
-                });
-        }
-
-        // Step 3: Implements weight-based calorie calculations instantly
-        function calculateCalories() {
-            const name = document.getElementById("client-name").value.trim();
-            const age = parseInt(document.getElementById("client-age").value) || 0;
-            const weight = parseFloat(document.getElementById("client-weight").value) || 0;
-            const program = document.getElementById("my-combobox").value;
-            const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
-
-            // 1. Client-side validation block
-            if (!name || !program) {
-                alert("Please fill client name and program.");
+            if (!selectedProgram) {
+                workLabel.innerText = "—";
+                workLabel.style.color = "#ffffff";
+                dietLabel.innerText = "—";
+                calculateCalories();
                 return;
             }
-                       
+
+            const data = programs[selectedProgram];
+            workLabel.innerText = data.workout;
+            workLabel.style.color = data.color;
+            dietLabel.innerText = data.diet;
+            dietLabel.style.color = "white";
+
+            calculateCalories();
+        }
+
+        // Live calculation matching target weight updates on input
+        function calculateCalories() {
+            const program = document.getElementById("my-combobox").value;
+            const weightInput = document.getElementById("client-weight").value;
             const label = document.getElementById("calorie-label");
 
-            const payload = {
-                name: name,
-                weight: weight,
-                program: program
-            };
-            fetch(`/api/v1.1/calculate_calories`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Calorie calculation request failed");
-                return response.json();
-            })
-            .then(data => {
-                const totalCalories = data.calories;
-                label.innerText = `Estimated Calories: ${totalCalories} kcal`;
-            })
-            .catch(error => {
-                console.error("Calorie calculation error:", error);
+            if (!program) {
                 label.innerText = "Estimated Calories: --";
-            });
-
-        }
-
-        // Step 4: Handles profile data validation notifications
-        function saveClient() {
-            const name = document.getElementById("client-name").value.trim();
-            const age = parseInt(document.getElementById("client-age").value) || 0;
-            const weight = parseFloat(document.getElementById("client-weight").value) || 0;
-            const program = document.getElementById("my-combobox").value;
-            const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
-
-            // 1. Client-side validation block
-            if (!name || !program) {
-                alert("Please fill client name and program.");
                 return;
             }
 
-            // 2. Build the JSON data payload matching your Python backend expectations
             const payload = {
                 name: name,
                 age: age,
@@ -208,8 +191,6 @@
                 program: program,
                 progress: adherence // Maps cleanly to data.get("progress") in Python
             };
-
-            const label = document.getElementById("calorie-label");
             fetch(`/api/v1.1/calculate_calories`, {
                     method: 'POST',
                     headers: {
@@ -230,7 +211,46 @@
                 label.innerText = "Estimated Calories: --";
             });
 
-            // 3. Dispatch POST request to the correct v1.1 API endpoint
+
+        }
+
+        // Corresponds to Tkinter's 'save_client' method
+        function saveClient() {
+            const name = document.getElementById("client-name").value.trim();
+            const program = document.getElementById("my-combobox").value;
+            const ageInput = document.getElementById("client-age").value;
+            const weightInput = document.getElementById("client-weight").value;
+            const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
+            const notes = document.getElementById("client-notes").value.trim();
+
+            if (!name || !program) {
+                alert("Please fill client name and program.");
+                return;
+            }
+
+            let age, weight;
+            try {
+                age = parseInt(ageInput);
+                weight = parseFloat(weightInput);
+                if (isNaN(age) || isNaN(weight)) {
+                    throw new Error();
+                }
+            } catch (e) {
+                alert("Age must be an integer and Weight must be a number.");
+                return;
+            }
+
+            //const client = [name, age, weight, program, adherence, notes];
+            //clients.push(client);
+
+             const payload = {
+                name: name,
+                age: age,
+                weight: weight,
+                program: program,
+                progress: adherence // Maps cleanly to data.get("progress") in Python
+            };
+
             fetch('/api/v1.1/save_client', {
                 method: 'POST',
                 headers: {
@@ -252,54 +272,49 @@
                 console.error("Save Client Error:", error);
                 alert(`Error: ${error.message}`);
             });
+
+
+            // Add dynamic table row layout instantly
+            const tableBody = document.getElementById("client-table-body");
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td>${age}</td>
+                <td>${weight}</td>
+                <td>${program}</td>
+                <td>${adherence}%</td>
+                <td>${notes || '—'}</td>
+            `;
+            tableBody.appendChild(tr);
+
+            updateChart();
+            alert(data.message);
         }
 
-        
+        function updateChart() {
+            if (!chartInstance) return;
+            fetch(`/api/v1.1.2/client?name=${encodeURIComponent(document.getElementById("client-name").value.trim())}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to fetch client data for chart");
+                    return response.json();
+                })
+                .then(data => {
+                    const clientDataset = data.client ? [data.client] : [];
+                })
+                .catch(error => {
+                    console.error("Chart Update Error:", error);
+                });
+            chartInstance.data.labels = clientDataset.map(c => c.name);
+            chartInstance.data.datasets[0].data = clientDataset.map(c => c.adherence);
+            chartInstance.update();
+        }
 
-        // Step 5: Restores form states clean
-        function resetForm() {
-    // 1. Dispatch the request to the correct v1.1 endpoint defined in your app.py
-    fetch("/api/v1.1/reset")
-        .then(response => {
-            if (!response.ok) throw new Error("Reset operation failed");
-            return response.json();
-        })
-        .then(data => {
-            console.log("Form reset successful:", data);
-            
-            // FIX: All UI manipulation using 'data' MUST happen inside this block!
-            document.getElementById("client-name").value = data.name || "";
-            document.getElementById("client-age").value = data.age || "0";
-            document.getElementById("client-weight").value = data.weight || "0";
-            document.getElementById("my-combobox").value = data.program || "";
-            document.getElementById("adherence-slider").value = data.adherence || "0";
-            document.getElementById("adherence-val").innerText = data.adherence || "0";
-            
-            const workLabel = document.getElementById("work-label");
-            const dietLabel = document.getElementById("diet-label");
-            
-            workLabel.innerText = data.weekly_workout_chart || "";
-            workLabel.style.color = "#ffffff";
-            dietLabel.innerText = data.daily_nutrition_plan || "";
-            
-            // Matches data.total_calories precisely with your Python reset dictionary keys
-            document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
-            
-            currentCalorieFactor = 0;
-        })
-        .catch(error => {
-            console.error("Form reset error:", error);
-            
-            // Fallback: Clear the inputs client-side anyway even if the network fails
-            document.getElementById("client-form").reset();
-            document.getElementById("adherence-val").innerText = data.adherence || "0";
-            document.getElementById("work-label").innerText = data.weekly_workout_chart ||"";
-            document.getElementById("work-label").style.color = "#ffffff";
-            document.getElementById("diet-label").innerText = data.daily_nutrition_plan ||"";
-            document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
-        });
-}
 
-    </script>
+        function exportCSV() {
+        alert('Exporting...');
+
+        }
+     </script>
 </body>
 </html>
+
