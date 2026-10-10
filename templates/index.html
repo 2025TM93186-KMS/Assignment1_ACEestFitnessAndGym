@@ -251,6 +251,27 @@
                 progress: adherence,
                 notes: notes
             };
+            const label = document.getElementById("calorie-label");
+            fetch(`/api/v1.1/calculate_calories`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Calorie calculation request failed");
+                return response.json();
+            })
+            .then(data => {
+                const totalCalories = data.calories;
+                label.innerText = `Estimated Calories: ${totalCalories} kcal`;
+            })
+            .catch(error => {
+                console.error("Calorie calculation error:", error);
+                label.innerText = "Estimated Calories: --";
+            });
+
 
             fetch('/api/v1.1/save_client', {
                 method: 'POST',
@@ -372,6 +393,50 @@
             }
         }
     }
+
+        function resetForm() {
+    // 1. Dispatch the request to the correct v1.1 endpoint defined in your app.py
+        fetch("/api/v1.1/reset")
+        .then(response => {
+            if (!response.ok) throw new Error("Reset operation failed");
+            return response.json();
+        })
+        .then(data => {
+            console.log("Form reset successful:", data);
+
+            // FIX: All UI manipulation using 'data' MUST happen inside this block!
+            document.getElementById("client-name").value = data.name || "";
+            document.getElementById("client-age").value = data.age || "0";
+            document.getElementById("client-weight").value = data.weight || "0";
+            document.getElementById("my-combobox").value = data.program || "";
+            document.getElementById("adherence-slider").value = data.adherence || "0";
+            document.getElementById("adherence-val").innerText = data.adherence || "0";
+
+            const workLabel = document.getElementById("work-label");
+            const dietLabel = document.getElementById("diet-label");
+
+            workLabel.innerText = data.weekly_workout_chart || "";
+            workLabel.style.color = "#ffffff";
+            dietLabel.innerText = data.daily_nutrition_plan || "";
+
+            // Matches data.total_calories precisely with your Python reset dictionary keys
+            document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
+
+            currentCalorieFactor = 0;
+        })
+        .catch(error => {
+            console.error("Form reset error:", error);
+
+            // Fallback: Clear the inputs client-side anyway even if the network fails
+            document.getElementById("client-form").reset();
+            document.getElementById("adherence-val").innerText = data.adherence || "0";
+            document.getElementById("work-label").innerText = data.weekly_workout_chart ||"";
+            document.getElementById("work-label").style.color = "#ffffff";
+            document.getElementById("diet-label").innerText = data.daily_nutrition_plan ||"";
+            document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
+        });
+        }
+
 
      </script>
 </body>
