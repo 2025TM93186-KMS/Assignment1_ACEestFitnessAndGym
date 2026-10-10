@@ -6,7 +6,9 @@
     <title>ACEest Functional Fitness</title>
     <link rel="stylesheet" href="/static/style.css">
     <!-- Chart.js for rendering the Progress Chart natively -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- <script src="https://jsdelivr.net"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -148,7 +150,7 @@
         };
 
         document.addEventListener("DOMContentLoaded", function() {
-            //initChart();
+            initializeChart();
         });
 
         // Corresponds to Tkinter's 'update_program' method
@@ -309,8 +311,8 @@
             `;
             tableBody.appendChild(tr);
 
-            updateChart();
             alert(data.message);
+            updateChartData();
         }
 
         function updateChart() {
@@ -436,6 +438,71 @@
             document.getElementById("calorie-label").innerText = `Estimated Calories: ${data.total_calories || '--'}`;
         });
         }
+
+
+        //////////// Charts
+        function initializeChart() {
+        const ctx = document.getElementById('progress-chart').getContext('2d');
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Adherence %',
+                    data: [],
+                    backgroundColor: '#d4af37', // Gold bar profiles matching your theme
+                    borderColor: '#b89324',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(212, 175, 55, 0.12)' }, // Transparent gold grid wires
+                        ticks: { color: '#d4af37' } // Gold numerical scales
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#d4af37' } // Gold text metrics
+                    }
+                }
+                }
+            });
+        }
+
+
+        // REPLACES: self.canvas.draw() / self.ax.clear() from Tkinter
+        function updateChartData() {
+            if (!chartInstance) return;
+
+            // 1. Map values directly out of your local array memory matching Python loops
+            const names = clients.map(c => c.name);
+            const adherence = clients.map(c => c.adherence);
+
+            // 2. Handle empty state views gracefully
+            if (names.length === 0) {
+                chartInstance.data.labels = ["No Saved Data"];
+                chartInstance.data.datasets[0].data = []; // Target the first dataset array index
+            } else {
+                // 3. Bind the fresh data directly to the active canvas parameters
+                chartInstance.data.labels = names;
+                chartInstance.data.datasets[0].data = adherence; // FIX: Added [0] index accessor
+            }
+
+            // 4. Trigger the layout canvas to smoothly re-paint the new bars
+            chartInstance.update();
+        }
+
+
 
 
      </script>

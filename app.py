@@ -316,6 +316,21 @@ def export_csv():
     )
 
 
+@app.route('/api/v1.1.2/chart_data', methods=['GET'])
+def get_chart_data():
+    try:
+        # Pulls metrics iteratively across your records array
+        names = [client[0] for client in CLIENTS_DB]
+        adherence = [client[4] for client in CLIENTS_DB]
+
+        return jsonify({
+            "names": names,
+            "adherence": adherence
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/v1.1.2/clear_clients", methods=["POST"])
 def clear_clients():
     CLIENTS_DB.clear()
