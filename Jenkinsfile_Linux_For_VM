@@ -6,7 +6,7 @@ pipeline {
 
     environment {
         APP_NAME     = 'aceest-fitness-app'
-        APP_VERSION  = '1.1.2'
+        APP_VERSION  = 'v1'
         DEV_URL      = "http://localhost:5001"
         TEST_URL     = "http://localhost:5002"
         STAGE_URL    = "http://localhost:5003"
