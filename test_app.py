@@ -8,10 +8,10 @@ def client():
     with app.test_client() as client:
         yield client
 
-def test_api_v1_0_root(client):
-    response = client.get('/api/v1.0')
+def test_api_v1_1_root(client):
+    response = client.get('/api/v1.1')
     assert response.status_code == 200
-    assert response.json['version'] == "1.0"
+    assert response.json['version'] == "1.1"
     assert response.json['metrics_summary']['capacity_users'] == 150
 
 def test_health_check(client):
