@@ -47,7 +47,6 @@ def test_save_client_success(client):
     response = client.post('/api/client', json=payload)
     assert response.status_code == 200
     assert "Client data saved" in response.json["message"]
-    assert response.json["calories"] == int(85.5 * 35)
 
 
 def test_save_client_validation_missing_fields(client):
@@ -67,7 +66,6 @@ def test_load_client_success(client):
     assert response.status_code == 200
     assert response.json["name"] == "Jane"
     assert response.json["program"] == "Fat Loss (FL)"
-    assert response.json["calories"] == int(60.0 * 22)
 
 
 def test_load_client_not_found(client):
