@@ -1,111 +1,125 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 import sys
+import io
+import csv
+
+import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  # Eliminates Cross-Origin blocking parameters for client integrations
+CLIENTS_DB = []
+DB_NAME = "aceest_fitness.db"
 
 PROGRAMS = {
-            "Fat Loss (FL)": {
-                "workout": (
-                    "Mon: Back Squat 5x5 + Core\n"
-                    "Tue: EMOM 20min Assault Bike\n"
-                    "Wed: Bench Press + 21-15-9\n"
-                    "Thu: Deadlift + Box Jumps\n"
-                    "Fri: Zone 2 Cardio 30min"
-                ),
-                "diet": (
-                    "Breakfast: Egg Whites + Oats\n"
-                    "Lunch: Grilled Chicken + Brown Rice\n"
-                    "Dinner: Fish Curry + Millet Roti\n"
-                    "Target: ~2000 kcal"
-                ),
-                "color": "#e74c3c",
-                "calorie_factor": 22
-            },
-            "Muscle Gain (MG)": {
-                "workout": (
-                    "Mon: Squat 5x5\n"
-                    "Tue: Bench 5x5\n"
-                    "Wed: Deadlift 4x6\n"
-                    "Thu: Front Squat 4x8\n"
-                    "Fri: Incline Press 4x10\n"
-                    "Sat: Barbell Rows 4x10"
-                ),
-                "diet": (
-                    "Breakfast: Eggs + Peanut Butter Oats\n"
-                    "Lunch: Chicken Biryani\n"
-                    "Dinner: Mutton Curry + Rice\n"
-                    "Target: ~3200 kcal"
-                ),
-                "color": "#2ecc71",
-                "calorie_factor": 35
-            },
-            "Beginner (BG)": {
-                "workout": (
-                    "Full Body Circuit:\n"
-                    "- Air Squats\n"
-                    "- Ring Rows\n"
-                    "- Push-ups\n"
-                    "Focus: Technique & Consistency"
-                ),
-                "diet": (
-                    "Balanced Tamil Meals\n"
-                    "Idli / Dosa / Rice + Dal\n"
-                    "Protein Target: 120g/day"
-                ),
-                "color": "#3498db",
-                "calorie_factor": 26
-            }
-        }
+            "Fat Loss (FL)": {"factor": 22},
+            "Muscle Gain (MG)": {"factor": 35},
+            "Beginner (BG)": {"factor": 26}
+}
+PROGRAMS_LOWER = {k.lower(): v for k, v in PROGRAMS.items()}
 
-# For lowercase mapping
-# PROGRAMS_LOWER = {k.lower(): v for k, v in PROGRAMS.items()}
+# V2.0.1 :
+# ---------- DATABASE LOGIC (ISOLATED LAZY LOADING) ----------
+def get_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+                CREATE TABLE IF NOT EXISTS clients (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE,
+                    age INTEGER,
+                    weight REAL,
+                    program TEXT,
+                    calories INTEGER
+                )
+    """)
+
+    cur.execute("""
+                CREATE TABLE IF NOT EXISTS progress (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    client_name TEXT,
+                    week TEXT,
+                    adherence INTEGER
+                )
+    """)
+
+    conn.commit()
+    conn.close()
 
 @app.route("/")
 def home():
-    # This looking for templates/index.html automatically
     return render_template("index.html")
 
-@app.route("/api/v1.1", methods=["GET"])
+def ensure_db_initialized():
+    """Checks and builds schemas only when invoked inside v2.0.1 data engines."""
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS clients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE,
+                age INTEGER,
+                weight REAL,
+                program TEXT,
+                calories INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_name TEXT,
+                week TEXT,
+                adherence INTEGER
+            )
+        """)
+        conn.commit()
+
+@app.route("/api", methods=["GET"])
 def api_root():
     return jsonify({
-        "version": "1.1",
+        "version": "2.1.2",
         "status": "active",
-        "service": "ACEest Fitness Foundation Engine",        
+        "service": "ACEest Fitness Foundation Engine",
         "available_endpoints": {
+            "health": "GET /api/health",
             "programs": "GET /api/v1.0/programs",
-            "health_v1_0": "GET /api/v1.0/health",
-            "entire_plan": "GET /api/v1.0/entire_plan",
-            "health": "GET /api/v1.1/health",
-            "calculate_calories": "POST /api/v1.1/calculate_calories",
-            "save_client": "POST /api/v1.1/save_client"
+            "entire_plan": "GET /api/entire_plan",
+            "save_client": "POST /api/client",
+            "load_client": "GET /api/client",
+            "save_progress": "POST /api/progress"
         }
     }), 200
 
-"""Health Check"""
-@app.route("/api/v1.0/health", methods=["GET"])
-def health_check_v1_0():
-    return jsonify({"status": "healthy", "service": "ACEest Fitness API V1.0 Backend"}), 200
-
-@app.route("/api/v1.1/health", methods=["GET"])
+"""Health Check V2.0.1"""
+@app.route("/api/health", methods=["GET"])
 def health_check():
-    return jsonify({"status": "healthy", "service": "ACEest Fitness API V1.1 Backend"}), 200
+    return (
+        jsonify(
+            {
+                "status": "healthy",
+                "service": "ACEest Fitness API V2.1.2 Backend",
+            }
+        ),
+        200,
+    )
+#
+    #Client and DB Related Operations
+#
 
-"""Returns a list of all available workout and fitness tracks"""
-@app.route("/api/v1.0/programs", methods=["GET"])
+@app.route("/api/programs", methods=["GET"])
 def get_programs():
     return jsonify({"programs": list(PROGRAMS.keys())}), 200
 
-"""
-    Returns full program details based on the program_name query parameter.
-    Example: /api/v1.0/entire_plan?program_name=Fat Loss (FL)
-"""
-@app.route("/api/v1.0/entire_plan", methods=["GET"])
+@app.route("/api/entire_plan", methods=["GET"])
 def get_entire_plan():
-    program_name = request.args.get("program_name")
+    program_name = request.args.get("program")
     if not program_name:
-        return jsonify({"error": "Missing required 'program_name' query parameter"}), 400
+        return jsonify({"error": "Missing required 'program' query parameter"}), 400
 
     program = PROGRAMS.get(program_name)
     if not program:
@@ -118,79 +132,122 @@ def get_entire_plan():
         "daily_nutrition_plan": program.get("diet")
     }), 200
 
-# ==========================================
-# NEW V1.1 ENDPOINTS
-# ==========================================
-
-@app.route("/api/v1.1/calculate_calories", methods=["POST"])
-def calculate_calories():
-    data = request.json or {}
-    program_name = data.get("program")
-    try:
-        weight = float(data.get("weight", 0))
-    except (ValueError, TypeError):
-        weight = 0.0
-
-    if not program_name:
-        return jsonify({"calories": "--"})
-
-    program = PROGRAMS.get(program_name)
-    if not program or weight <= 0:
-        return jsonify({"calories": "--"})
-
-    calories = int(weight * program["calorie_factor"])
-    return jsonify({"calories": f"{calories} kcal"})
-
-"""
-    Validates profile metrics processing data structures in-memory.
-    POST JSON payload: {"name": "Jane", "program": "Muscle Gain (MG)", "age": 25, "weight": 70, "progress": 90}
-"""
-@app.route("/api/v1.1/save_client", methods=["POST"])
+@app.route("/api/client", methods=["POST"])
 def save_client():
+    data = request.json or {}
+    name = data.get("name")
+    program = data.get("program")
+
+    if not name or not program:
+        return jsonify({"error": "Name and Program fields are required"}), 400
+
     try:
-        data = request.json or {}
-        name = data.get("name", "").strip()
-        program_name = data.get("program")
-
-        if not name or not program_name:
-            return jsonify({"error": "Please fill client name and program."}), 400
-
-        program = PROGRAMS.get(program_name)
-        if not program:
-            return jsonify({"error": f"Program '{program_name}' not found."}), 400
-
-    
         age = int(data.get("age", 0))
-        weight = float(data.get("weight", 0))
-        target_adherence = int(data.get("progress", 0))
-    
+        weight = float(data.get("weight", 0.0))
+    except (ValueError, TypeError):
+        return (
+            jsonify({"error": "Invalid format for age or numerical weight"}),
+            400,
+        )
 
-        calories = int(weight * program["calorie_factor"]) if weight > 0 else 0
+    program_details = PROGRAMS_LOWER.get(program.lower())
+    if not program_details:
+        return jsonify({"error": f"Program '{program}' matches no baseline"}), 404
 
-        return jsonify({
-            "success": f"Client '{name}' saved successfully.",
-            "adherence": target_adherence,
-            "calculated_calories": calories
-        }), 200
+    calories = int(weight * program_details["factor"])
+
+    program_value = next(
+        (key for key, val in PROGRAMS.items() if key.lower() == program.lower()),
+        program  # Default string fallback value if no match is found
+    )
+
+    try:
+        with get_db() as conn:
+            client = conn.execute(
+                """
+                INSERT OR REPLACE INTO clients (name, age, weight, program, calories)
+                VALUES (?, ?, ?, ?, ?)
+            """,
+                (name, age, weight, program_value, calories),
+            )
+            conn.commit()
+        return (
+            jsonify({"message": "Client data saved", "id":client.lastrowid, "calories": calories}),
+            200,
+        )
     except Exception as e:
-            return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/v1.1/reset", methods=["GET"])
-def reset():
-    data = {
-        "name": "",
-        "age": 0,
-        "weight": 0.0,        
-        "program": "",
-        "adherence": 0,
-        "total_calories": "--",
-        "weekly_workout_chart": "",
-        "daily_nutrition_plan": ""        
-    }
-    return jsonify(data), 200
+@app.route("/api/client", methods=["GET"])
+def load_client():
+    ensure_db_initialized()  # Auto-creates tables seamlessly if missing
+    name = request.args.get("name")
+    if not name:
+        return jsonify({"error": "Missing 'name' query parameter"}), 400
+
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT * FROM clients WHERE name = ?", (name,)
+            ).fetchone()
+
+            if not row:
+                return jsonify({"error": "Client not found"}), 404
+
+            return (
+                jsonify(
+                    {
+                        "id": row["id"],
+                        "name": row["name"],
+                        "age": row["age"],
+                        "weight": row["weight"],
+                        "program": row["program"],
+                        "calories": row["calories"],
+                    }
+                ),
+                200,
+            )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/progress", methods=["POST"])
+def save_progress():
+    data = request.json or {}
+    name = data.get("name")
+
+    if not name:
+        return jsonify({"error": "Target client 'name' property required"}), 400
+
+    try:
+        adherence = int(data.get("adherence", 0))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Adherence configuration must be numerical"}), 400
+
+    week_stamp = datetime.now().strftime("Week %U - %Y")
+
+    try:
+        with get_db() as conn:
+            progress = conn.execute(
+                """
+                INSERT INTO progress (client_name, week, adherence)
+                VALUES (?, ?, ?)
+            """,
+                (name, week_stamp, adherence),
+            )
+            conn.commit()
+        return (
+            jsonify({"message": "Weekly progress logged", "id": progress.lastrowid}),
+            201,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == "__main__":
+    init_db()
     port_number = 5000
     for arg in sys.argv:
         if arg.startswith('--port='):

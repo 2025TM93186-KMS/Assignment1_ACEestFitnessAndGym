@@ -6,3 +6,9 @@ __pycache__/
 app.py.save
 myenv/
 .idea/
+<<<<<<< HEAD
+=======
+*.db
+*.xml
+.idea/dbnavigator.xml
+>>>>>>> Stage
