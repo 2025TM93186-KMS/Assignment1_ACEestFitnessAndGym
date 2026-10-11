@@ -3,10 +3,10 @@ let chartInstance = null;
 let loadedPrograms = {}; // Renamed from duplicate reference tracking name to prevent compilation crash
 
 const PROGRAMS = {
-    "Fat Loss (FL) – 3 day": {"factor": 22, "desc": "3-day full-body fat loss"},
-    "Fat Loss (FL) – 5 day": {"factor": 24, "desc": "5-day split, higher volume fat loss"},
-    "Muscle Gain (MG) – PPL": {"factor": 35, "desc": "Push/Pull/Legs hypertrophy"},
-    "Beginner (BG)": {"factor": 26, "desc": "3-day simple beginner full-body"}
+            "Fat Loss (FL) – 3 day": {"factor": 22, "desc": "3-day full-body fat loss"},
+            "Fat Loss (FL) – 5 day": {"factor": 24, "desc": "5-day split, higher volume fat loss"},
+            "Muscle Gain (MG) – PPL": {"factor": 35, "desc": "Push/Pull/Legs hypertrophy"},
+            "Beginner (BG)": {"factor": 26, "desc": "3-day simple beginner full-body"}
 };
 
 document.addEventListener("DOMContentLoaded", function() {

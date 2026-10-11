@@ -33,106 +33,95 @@ def get_db():
     return conn
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cur = conn.cursor()
-
-    cur.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='clients'"
-    )
-    exists = cur.fetchone() is not None
-
-    if exists:
-        # Check schema
-        cur.execute("PRAGMA table_info(clients)")
-        cols = [row[1] for row in cur.fetchall()]
-        required = {
-            "id",
-            "name",
-            "age",
-            "height",
-            "weight",
-            "program",
-            "calories",
-            "target_weight",
-            "target_adherence",
-        }
-        if not required.issubset(set(cols)):
-            # Drop and recreate with full schema
-            cur.execute("DROP TABLE clients")
-
-    # Create clients with full schema
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS clients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            age INTEGER,
-            height REAL,
-            weight REAL,
-            program TEXT,
-            calories INTEGER,
-            target_weight REAL,
-            target_adherence INTEGER
-        )
-        """
-    )
-
-    # Weekly adherence
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS progress (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            week TEXT,
-            adherence INTEGER
-        )
-        """
-    )
-
-    # Workouts (session-level)
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS workouts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            date TEXT,
-            workout_type TEXT,
-            duration_min INTEGER,
-            notes TEXT
-        )
-        """
-    )
-
-    # Exercises (per workout)
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS exercises (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            workout_id INTEGER,
-            name TEXT,
-            sets INTEGER,
-            reps INTEGER,
-            weight REAL
-        )
-        """
-    )
-
-    # Body metrics (weight, waist, etc.)
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS metrics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_name TEXT,
-            date TEXT,
-            weight REAL,
-            waist REAL,
-            bodyfat REAL
-        )
-        """
-    )
-
-    conn.commit()
-    conn.close()
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            # Users table
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE,
+                    password TEXT,
+                    role TEXT
+                )
+                """
+            )
+            # Default admin user
+            cur.execute(
+                "INSERT OR IGNORE INTO users (username, password, role) "
+                "VALUES ('admin','admin','Admin')"
+            )
+            # Clients
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS clients (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE,
+                    age INTEGER,
+                    height REAL,
+                    weight REAL,
+                    program TEXT,
+                    calories INTEGER,
+                    target_weight REAL,
+                    target_adherence INTEGER,
+                    membership_expiry TEXT
+                )
+                """
+            )
+            # Progress
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS progress (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    client_name TEXT,
+                    week TEXT,
+                    adherence INTEGER
+                )
+                """
+            )
+            # Workouts
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS workouts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    client_name TEXT,
+                    date TEXT,
+                    workout_type TEXT,
+                    duration_min INTEGER,
+                    notes TEXT
+                )
+                """
+            )
+            # Exercises
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS exercises (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id INTEGER,
+                    name TEXT,
+                    sets INTEGER,
+                    reps INTEGER,
+                    weight REAL
+                )
+                """
+            )
+            # Metrics
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    client_name TEXT,
+                    date TEXT,
+                    weight REAL,
+                    waist REAL,
+                    bodyfat REAL
+                )
+                """
+            )
+            conn.commit()
+    finally:
+        conn.close()
 
 @app.route("/")
 def home():
