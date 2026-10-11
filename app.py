@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, send_file
 from flask_cors import CORS
 import sys
 import io
@@ -9,8 +9,13 @@ from datetime import datetime
 
 import base64
 import matplotlib
+
 matplotlib.use('Agg') # Prevents desktop GUI windows from opening
 import matplotlib.pyplot as plt
+
+import random
+from fpdf import FPDF, XPos, YPos
+
 
 app = Flask(__name__)
 CORS(app)  # Eliminates Cross-Origin blocking parameters for client integrations
@@ -564,7 +569,7 @@ def login_user():
         data = request.json or {}
         username = data.get("username")
         password = data.get("password")
-        init_db()
+
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute(
@@ -581,7 +586,7 @@ def login_user():
 @app.route("/api/clients", methods=["GET"])
 def get_client_list():
     try:
-        init_db()
+
         with get_db() as conn:
             cur = conn.cursor()
             client = cur.execute("SELECT * FROM clients ORDER BY name")
@@ -626,7 +631,7 @@ def save_client():
                 program  # Default string fallback value if no match is found
             )
 
-            init_db()
+
             with get_db() as conn:
                 cur = conn.cursor()
                 client = cur.execute(
@@ -651,7 +656,6 @@ def load_client():
         if not name:
             return jsonify({"error": "Missing 'name' query parameter"}), 400
 
-        init_db()
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM clients WHERE name=?", (name,))
@@ -680,7 +684,7 @@ def generate_ai_program():
         exp_level = request.args.get("exp_level")
         if not exp_level or exp_level.lower() not in ["beginner", "intermediate", "advanced"]:
             return jsonify({"error": "Invalid experience level"}), 400
-        init_db()
+
         with get_db() as conn:
             cur = conn.cursor()
             cur.execute("SELECT program FROM clients WHERE name=?", (name,))
@@ -789,8 +793,18 @@ def export_pdf_report():
                 pdf.cell(0, 10, f"Program: {program_text}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                 pdf.cell(0, 10, f"Membership Expiry: {expiry_text}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        pdf.output(f"{name}_report.pdf")
-        return jsonify({"message": f"Report saved as {name}_report.pdf"}), 200
+        # pdf.output(f"{name}_report.pdf")
+        pdf_output = io.BytesIO()
+        pdf.output(pdf_output)
+        pdf_output.seek(0)
+
+        return send_file(
+            pdf_output,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"{name}_report.pdf"
+        )
+        # return jsonify({"message": f"Report saved as {name}_report.pdf"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

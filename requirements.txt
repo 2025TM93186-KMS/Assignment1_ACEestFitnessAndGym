@@ -2,4 +2,5 @@ Flask
 pytest
 flask_cors
 matplotlib
+fpdf2
 
