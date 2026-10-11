@@ -159,6 +159,11 @@ def save_client():
 
     calories = int(weight * program_details["factor"])
 
+    program_value = next(
+        (key for key, val in PROGRAMS.items() if key.lower() == program.lower()),
+        program  # Default string fallback value if no match is found
+    )
+
     try:
         with get_db() as conn:
             client = conn.execute(
@@ -166,7 +171,7 @@ def save_client():
                 INSERT OR REPLACE INTO clients (name, age, weight, program, calories)
                 VALUES (?, ?, ?, ?, ?)
             """,
-                (name, age, weight, program, calories),
+                (name, age, weight, program_value, calories),
             )
             conn.commit()
         return (
