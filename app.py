@@ -662,8 +662,9 @@ def workout_history():
                 (name,),
             )
             workouts = cur.fetchall()
+            serializable_workouts = [tuple(row) for row in workouts]
             return (
-                jsonify({"workout history": workouts}),
+                jsonify({"workout_history": serializable_workouts}),
                 200,
             )
     except Exception as e:

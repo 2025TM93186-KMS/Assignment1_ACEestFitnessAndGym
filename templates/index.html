@@ -6,13 +6,13 @@
     <title>ACEest Functional Fitness</title>
     <link rel="stylesheet" href="/static/style.css">
     <!-- Chart.js for rendering the Progress Chart natively -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
     <!-- Header Block -->
     <header>
-        <h1>ACEest FUNCTIONAL FITNESS SYSTEM v2</h1>
+        <h1>ACEest Functional Fitness System</h1>
     </header>
 
     <!-- Main Container Layout -->
@@ -26,7 +26,7 @@
                 <!-- Client Selector Dropdown -->
                 <div class="input-group">
                     <label for="client-selector">Select Client</label>
-                    <select id="client-selector" > <!-- onchange="onClientSelected(this.value)" -->
+                    <select id="client-selector" onchange="onClientSelected(this.value)">
                         <option value="">-- Select Existing Client --</option>
                     </select>
                 </div>
@@ -52,23 +52,12 @@
                     <input type="text" id="client-weight" value="0.0">
                 </div>
 
-                <!-- <div class="input-group">
-                    <label class="select-label" for="my-combobox">Program</label>
-                    <select id="my-combobox" class="combobox" name="program">
-                        <option value="" selected>-- Select a program --</option>
-                        <option value="Fat Loss (FL)">Fat Loss (FL)</option>
-                        <option value="Muscle Gain (MG)">Muscle Gain (MG)</option>
-                        <option value="Beginner (BG)">Beginner (BG)</option>
-                    </select>
-                </div> -->
                 <div class="input-group">
                     <label class="select-label" for="my-combobox">Program</label>
-                    <!-- FIXED: Added explicit id="my-combobox" attribute -->
                     <select id="my-combobox" class="combobox" name="program">
                         <option value="" selected>-- Select a program --</option>
                     </select>
                 </div>
-
 
                 <!-- Goals Section -->
                 <div class="input-group">
@@ -86,14 +75,14 @@
                     <input type="range" id="adherence-slider" min="0" max="100" value="0" oninput="document.getElementById('adherence-val').innerText = this.value">
                 </div>
 
-                <!-- Interface Control Buttons -->
-                <div class="button-group">
-                    <button type="button" class="btn btn-export" onclick="saveClient()">Save Client</button>
-                    <button type="button" class="btn btn-export" onclick="loadClient()">Load Client</button>
-                    <button type="button" class="btn btn-export" onclick="saveProgress()">Save Weekly Progress</button>
-                    <button type="button" class="btn btn-export" onclick="openLogWorkoutModal()">Log Workout</button>
-                    <button type="button" class="btn btn-export" onclick="openLogMetricsModal()">Log Body Metrics</button>
-                    <button type="button" class="btn btn-export" onclick="loadWorkoutHistory()">View Workout History</button>
+                <!-- Interface Control Buttons Structure Map -->
+                <div class="button-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px;">
+                    <button type="button" class="btn btn-export" onclick="saveClient()" style="grid-column: span 1; padding: 10px; font-weight: bold; background:#d4af37; color:#000;">Save Client</button>
+                    <button type="button" class="btn btn-export" onclick="loadClient()" style="grid-column: span 1; padding: 10px; font-weight: bold; background:#444; color:#fff;">Load Client</button>
+                    <button type="button" class="btn btn-export" onclick="saveProgress()" style="grid-column: span 2; padding: 10px; font-weight: bold; background:#444; color:#fff;">Save Weekly Progress</button>
+                    <button type="button" class="btn btn-export" onclick="openLogWorkoutModal()" style="grid-column: span 1; padding: 10px; font-weight: bold; background:#444; color:#fff;">Log Workout</button>
+                    <button type="button" class="btn btn-export" onclick="openLogMetricsModal()" style="grid-column: span 1; padding: 10px; font-weight: bold; background:#444; color:#fff;">Log Body Metrics</button>
+                    <button type="button" class="btn btn-export" onclick="loadWorkoutHistory()" style="grid-column: span 2; padding: 10px; font-weight: bold; background-color: #333; color: #d4af37; border: 1px solid #d4af37;">View Workout History</button>
                 </div>
             </form>
         </aside>
@@ -101,39 +90,66 @@
         <!-- Right Panel: Display Elements, Tables, and Charts -->
         <main class="right-panel">
 
-            <!-- Weekly Workout Chart Display Box -->
-            <div class="group-box text-block-frame">
-                <span class="group-box-title"> Client Summary </span>
-                <div id="work-label" class="scrollable-block">—</div>
+            <!-- Horizontal Tab Selection Architecture Layout -->
+            <div class="tab-controls" style="margin-bottom: 20px; display: flex; gap: 4px; border-bottom: 2px solid #333; width: 100%;">
+                <button type="button" class="btn" id="btn-summary" onclick="switchTab('summary')" style="flex: 1; max-width: 220px; padding: 12px; background: #222; color: #d4af37; border: none; border-bottom: 3px solid #d4af37; cursor: pointer; font-weight: bold; text-align: center;">Client Summary</button>
+                <button type="button" class="btn" id="btn-analytics" onclick="switchTab('analytics')" style="flex: 1; max-width: 220px; padding: 12px; background: #111; color: #888; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: bold; text-align: center;">Progress & Analytics</button>
             </div>
 
-            <!-- <div style="width: 800px; max-width: 100%; margin: 0 auto; background-color: white;">
-                <canvas id="adherenceChart"></canvas>
-            </div> -->
+            <!-- Tab 1: Summary Output Shell -->
+            <div id="tab-summary" class="tab-content">
+                <div class="group-box text-block-frame">
+                    <span class="group-box-title"> Client Summary </span>
+                    <pre id="work-label" class="scrollable-block" style="font-family: 'Consolas', monospace; white-space: pre-wrap; background:#111; color:#fff; padding: 10px; border-radius:4px;">— No Client Loaded —</pre>
+                </div>
 
-            <div style="margin-top: 20px;">
-                <img id="matplotlibChart" src="" alt="Chart will appear here" style="max-width:100%; display:none;">
+                <!-- Workout History Section -->
+                <div class="group-box" style="margin-top: 20px;">
+                    <span class="group-box-title"> Workout History </span>
+                    <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+                        <table id="workout-history-table" style="width:100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="background-color: #333; color: #d4af37;">
+                                    <th style="padding: 8px;">Date</th>
+                                    <th style="padding: 8px;">Type</th>
+                                    <th style="padding: 8px;">Duration (min)</th>
+                                    <th style="padding: 8px;">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="4" style="padding: 8px; text-align: center;">No history logs loaded</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
-            <!-- Diet Chart Display Box (Tamil Nadu Context) -->
+            <!-- Tab 2: Analytics & Canvas Presentation Context -->
+            <div id="tab-analytics" class="tab-content" style="display: none; padding-top: 15px;">
+                <!-- Modernized Row Layout For Analytics Control Elements -->
+                <div class="button-group" style="display: flex; flex-direction: row; justify-content: flex-start; gap: 10px; margin-bottom: 20px; width: 100%;">
+                    <button type="button" class="btn" onclick="renderAdherenceChart()" style="flex: 1; max-width: 200px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: background 0.2s;">Adherence Chart</button>
+                    <button type="button" class="btn" onclick="renderWeightChart()" style="flex: 1; max-width: 200px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: background 0.2s;">Weight Trend Chart</button>
+                    <button type="button" class="btn" onclick="showBMIInfo()" style="flex: 1; max-width: 200px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: background 0.2s;">BMI & Risk Info</button>
+                </div>
 
-
-            <!-- Dynamic Live Calorie Output Label -->
-
-
-            <!-- CLIENT LIST TABLE -->
-
-
-            <!-- PROGRESS CHART -->
-
+                <!-- High-Contrast Analytics Rendering Canvas Envelope Box -->
+                <div class="group-box" style="background-color: #111111; padding: 20px; border: 2px solid #d4af37; border-radius: 6px; min-height: 380px;">
+                    <span class="group-box-title" id="chart-title" style="color: #d4af37; font-weight: bold; font-size: 14px;">Analytics Graph Display</span>
+                    <div style="width: 100%; max-width: 100%; height: 320px; position: relative; margin-top: 10px;">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
         </main>
     </div>
 
-<div id="workout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <!-- Modals for Logging Actions -->
+    <div id="workout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
         <div class="group-box" style="background:#1a1a1a; width:400px; padding:20px; border:1px solid #d4af37;">
             <span class="group-box-title">Log Workout</span>
-            <div class="input-group"><label>Workout Type</label><select id="modal-w-type"><option>Strength</option><option>Hypertrophy</option><option>Conditioning</option><option>Mixed</option><option>Mobility</option></select></div>
+                        <div class="input-group"><label>Workout Type</label><select id="modal-w-type"><option>Strength</option><option>Hypertrophy</option><option>Conditioning</option><option>Mixed</option><option>Mobility</option></select></div>
             <div class="input-group"><label>Duration (min)</label><input type="number" id="modal-w-dur" value="60"></div>
             <div class="input-group"><label>Exercise Name</label><input type="text" id="modal-w-ex-name"></div>
             <div class="input-group"><label>Sets</label><input type="number" id="modal-w-sets" value="3"></div>
@@ -161,7 +177,8 @@
         </div>
     </div>
 
-    <!-- Javascript Functions -->
+    <!-- Decoupled JavaScript Script Link Target Entry -->
     <script src="/static/app.js"></script>
 </body>
 </html>
+

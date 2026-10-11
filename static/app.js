@@ -204,7 +204,7 @@ function loadWorkoutHistory() {
     .then(data => {
         const tbody = document.querySelector("#workout-history-table tbody");
         tbody.innerHTML = "";
-        const history = data["workout history"] || data;
+        const history = data["workout_history"] || data;
         if (!history || history.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" style="padding: 8px; text-align: center;">No history logs loaded</td></tr>';
             return;
