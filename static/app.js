@@ -271,26 +271,79 @@ function submitWorkout() {
         });
         }
         function initChartContext(title, type, labels, data, labelName, color) {
-        if (chartInstance) chartInstance.destroy();
-        document.getElementById("chart-title").innerText = title;
-        const ctx = document.getElementById('analyticsChart').getContext('2d');
-        chartInstance = new Chart(ctx, {
-        type: type,
+    if (chartInstance) chartInstance.destroy();
+    document.getElementById("chart-title").innerText = title;
+
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+        type: 'line',
         data: {
-        labels: labels,
-        datasets: [{
-        label: labelName,
-        data: data,
-        borderColor: color,
-        backgroundColor: color + "33",
-        borderWidth: 2,
-        tension: 0.1,
-        fill: true
-        }]
+            labels: labels,
+            datasets: [{
+                label: labelName,
+                data: data,
+                borderColor: '#1d4ed8', // Sharp blue data trajectory matching image plot lines
+                backgroundColor: '#1d4ed8',
+                borderWidth: 2,
+                pointBackgroundColor: '#1d4ed8',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 1.5,
+                pointRadius: 5,
+                tension: 0,
+                fill: false
+            }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
-        });
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        stepSize: 20,
+                        color: '#000000', // Clear black values text over white background
+                        font: { size: 12, family: 'sans-serif' }
+                    },
+                    grid: {
+                        color: '#cccccc', // Structured chart matrix dividers
+                        drawBorder: true
+                    },
+                    title: {
+                        display: true,
+                        text: labelName, // Automatically binds tracking context metrics title
+                        color: '#000000',
+                        font: { size: 13, weight: 'bold' }
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        color: '#000000', // High contrast timeline labels
+                        font: { size: 12, family: 'sans-serif' }
+                    },
+                    grid: {
+                        color: '#cccccc',
+                        drawOnChartArea: true
+                    },
+                    title: {
+                        display: true,
+                        text: 'Week',
+                        color: '#000000',
+                        font: { size: 13, weight: 'bold' }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
         }
+    });
+}
+
         function renderAdherenceChart() {
         if (!currentClient) return;
         fetch('/api/progress?name=' + encodeURIComponent(currentClient))
