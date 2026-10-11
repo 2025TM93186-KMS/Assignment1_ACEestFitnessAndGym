@@ -174,6 +174,11 @@ def api_root():
             "save_client": "POST /api/client",
             "load_client": "GET /api/client",
             "save_progress": "POST /api/progress",
+            "show_weight_chart": "GET /api/weight",
+            "show_bmi_info": "GET /api/bmi",
+            "save_workout": "POST /api/workout",
+            "save_metrics": "POST /api/metrics",
+            "workout_history": "GET /api/workout",
             "get_clients_names": "GET /api/clients/names"
         }
     }), 200
