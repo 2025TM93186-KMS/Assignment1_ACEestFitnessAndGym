@@ -225,10 +225,42 @@ function triggerPDFReport() {
  * Reads profile timelines to return target subscription values.
  */
 function triggerMembershipCheck() {
-    if (!currentActiveClient) return alert("Select a client first");
+   /* if (!currentActiveClient) return alert("Select a client first");
     const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
     const data = clients[currentActiveClient];
-    alert(`Membership: ${data.status}\nRenewal Date: ${data.end || 'N/A'}`);
+    alert(`Membership: ${data.status}\nRenewal Date: ${data.end || 'N/A'}`); */
+    if (!currentActiveClient) {
+        return alert("Select a client first");
+    }
+
+    // Safely encode parameters to protect spaces and special characters inside URLs
+    const targetUrl = `/api/check_membership?name=${encodeURIComponent(currentActiveClient)}`;
+
+    fetch(targetUrl, {
+        method: "GET",
+        headers: {
+            "Accept": "application/json"
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Extract server exception payloads cleanly if records are missing
+            return response.json().then(err => { throw new Error(err.error || "Membership check failed"); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Unpack the exact pre-formatted multi-line message block returned by Python
+        if (data && data.message) {
+            alert(data.message);
+        } else {
+            alert(`Membership: Active\nRenewal Date: N/A`);
+        }
+    })
+    .catch(error => {
+        console.error("Membership Check Engine Exception:", error);
+        alert(`Verification Error: ${error.message}`);
+    });
 }
 
 /**
