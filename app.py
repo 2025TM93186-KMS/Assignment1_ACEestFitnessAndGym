@@ -18,9 +18,10 @@ CLIENTS_DB = []
 DB_NAME = "aceest_fitness.db"
 
 PROGRAMS = {
-            "Fat Loss (FL)": {"factor": 22},
-            "Muscle Gain (MG)": {"factor": 35},
-            "Beginner (BG)": {"factor": 26}
+            "Fat Loss (FL) – 3 day": {"factor": 22, "desc": "3-day full-body fat loss"},
+            "Fat Loss (FL) – 5 day": {"factor": 24, "desc": "5-day split, higher volume fat loss"},
+            "Muscle Gain (MG) – PPL": {"factor": 35, "desc": "Push/Pull/Legs hypertrophy"},
+            "Beginner (BG)": {"factor": 26, "desc": "3-day simple beginner full-body"}
 }
 PROGRAMS_LOWER = {k.lower(): v for k, v in PROGRAMS.items()}
 
@@ -30,29 +31,105 @@ def get_db():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
+
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
-    cur.execute("""
-                CREATE TABLE IF NOT EXISTS clients (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE,
-                    age INTEGER,
-                    weight REAL,
-                    program TEXT,
-                    calories INTEGER
-                )
-    """)
+    cur.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='clients'"
+    )
+    exists = cur.fetchone() is not None
 
-    cur.execute("""
-                CREATE TABLE IF NOT EXISTS progress (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    client_name TEXT,
-                    week TEXT,
-                    adherence INTEGER
-                )
-    """)
+    if exists:
+        # Check schema
+        cur.execute("PRAGMA table_info(clients)")
+        cols = [row[1] for row in cur.fetchall()]
+        required = {
+            "id",
+            "name",
+            "age",
+            "height",
+            "weight",
+            "program",
+            "calories",
+            "target_weight",
+            "target_adherence",
+        }
+        if not required.issubset(set(cols)):
+            # Drop and recreate with full schema
+            cur.execute("DROP TABLE clients")
+
+    # Create clients with full schema
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            age INTEGER,
+            height REAL,
+            weight REAL,
+            program TEXT,
+            calories INTEGER,
+            target_weight REAL,
+            target_adherence INTEGER
+        )
+        """
+    )
+
+    # Weekly adherence
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            week TEXT,
+            adherence INTEGER
+        )
+        """
+    )
+
+    # Workouts (session-level)
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS workouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            date TEXT,
+            workout_type TEXT,
+            duration_min INTEGER,
+            notes TEXT
+        )
+        """
+    )
+
+    # Exercises (per workout)
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS exercises (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workout_id INTEGER,
+            name TEXT,
+            sets INTEGER,
+            reps INTEGER,
+            weight REAL
+        )
+        """
+    )
+
+    # Body metrics (weight, waist, etc.)
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_name TEXT,
+            date TEXT,
+            weight REAL,
+            waist REAL,
+            bodyfat REAL
+        )
+        """
+    )
 
     conn.commit()
     conn.close()
@@ -87,7 +164,7 @@ def ensure_db_initialized():
 @app.route("/api", methods=["GET"])
 def api_root():
     return jsonify({
-        "version": "2.2.1",
+        "version": "2.2.4",
         "status": "active",
         "service": "ACEest Fitness Foundation Engine",
         "available_endpoints": {
@@ -107,7 +184,7 @@ def health_check():
         jsonify(
             {
                 "status": "healthy",
-                "service": "ACEest Fitness API V2.2.1 Backend",
+                "service": "ACEest Fitness API V2.2.4 Backend",
             }
         ),
         200,
@@ -249,7 +326,7 @@ def save_progress():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# region V2.2.1
+# region V2.2.4
 @app.route("/api/progress", methods=["GET"])
 def load_progress():
     name = request.args.get("name")
