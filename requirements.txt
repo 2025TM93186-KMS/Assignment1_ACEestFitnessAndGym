@@ -1,4 +1,5 @@
 Flask
 pytest
 flask_cors
+matplotlib
 
