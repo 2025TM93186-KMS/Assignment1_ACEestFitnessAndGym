@@ -82,7 +82,7 @@ def ensure_db_initialized():
 @app.route("/api", methods=["GET"])
 def api_root():
     return jsonify({
-        "version": "2.1.2",
+        "version": "2.2.1",
         "status": "active",
         "service": "ACEest Fitness Foundation Engine",
         "available_endpoints": {
@@ -95,14 +95,14 @@ def api_root():
         }
     }), 200
 
-"""Health Check V2.0.1"""
+"""Health Check"""
 @app.route("/api/health", methods=["GET"])
 def health_check():
     return (
         jsonify(
             {
                 "status": "healthy",
-                "service": "ACEest Fitness API V2.1.2 Backend",
+                "service": "ACEest Fitness API V2.2.1 Backend",
             }
         ),
         200,
@@ -243,6 +243,76 @@ def save_progress():
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# region V2.2.1
+@app.route("/api/progress", methods=["GET"])
+def load_progress():
+    ensure_db_initialized()
+    name = request.args.get("name")
+    if not name:
+        return jsonify({"error": "Missing required 'name' filter parameter"}), 400
+
+    try:
+        with get_db_connection() as conn:
+            rows = conn.execute("""
+                SELECT id, week, adherence 
+                FROM progress 
+                WHERE client_name = ? 
+                ORDER BY id ASC
+            """, (name,)).fetchall()
+
+        progress_log = [
+            {"id": row["id"], "week": row["week"], "adherence": row["adherence"]}
+            for row in rows
+        ]
+        return jsonify({"client_name": name, "progress": progress_log}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/progress/export", methods=["GET"])
+def export_progress():
+    ensure_db_initialized()
+    name = request.args.get("name")
+    if not name:
+        return jsonify({"error": "Missing required 'name' filter parameter"}), 400
+
+    try:
+        with get_db_connection() as conn:
+            rows = conn.execute("""
+                SELECT week, adherence 
+                FROM progress 
+                WHERE client_name = ? 
+                ORDER BY id ASC
+            """, (name,)).fetchall()
+
+        if not rows:
+            return jsonify({"error": f"No structural timelines logged for {name}"}), 404
+
+        output = io.StringIO()
+        # noinspection PyTypeChecker
+        writer = csv.writer(output, delimiter=",", quoting=csv.QUOTE_MINIMAL)
+
+        # Write CSV Schema Headers
+        writer.writerow(["Client Name", "Week Identifier", "Adherence Percentage"])
+        for row in rows:
+            writer.writerow([name, row["week"], f"{row['adherence']}%"])
+
+        response_stream = output.getvalue()
+        output.close()
+
+        # Build streaming response configuration headers
+        filename = f"{name.lower().replace(' ', '_')}_progress.csv"
+        return Response(
+            response_stream,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+# endregion
 
 
 

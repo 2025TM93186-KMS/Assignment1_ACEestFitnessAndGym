@@ -11,7 +11,7 @@ def client():
 def test_api_root(client):
     response = client.get('/api')
     assert response.status_code == 200
-    assert response.json['version'] == "2.1.2"
+    assert response.json['version'] == "2.2.1"
 
 def test_health_check(client):
     response = client.get('/api/health')
