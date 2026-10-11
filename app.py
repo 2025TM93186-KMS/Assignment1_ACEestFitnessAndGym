@@ -38,16 +38,16 @@ def init_db():
                     program TEXT,
                     calories INTEGER
                 )
-            """)
+    """)
 
     cur.execute("""
-            CREATE TABLE IF NOT EXISTS progress (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                client_name TEXT,
-                week TEXT,
-                adherence INTEGER
-            )
-        """)
+                CREATE TABLE IF NOT EXISTS progress (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    client_name TEXT,
+                    week TEXT,
+                    adherence INTEGER
+                )
+    """)
 
     conn.commit()
     conn.close()
@@ -79,13 +79,10 @@ def ensure_db_initialized():
         """)
         conn.commit()
 
-# ==========================================
-# V2.0.1 ENDPOINTS
-# ==========================================
 @app.route("/api", methods=["GET"])
 def api_root():
     return jsonify({
-        "version": "2.0.1",
+        "version": "2.1.2",
         "status": "active",
         "service": "ACEest Fitness Foundation Engine",
         "available_endpoints": {
@@ -105,7 +102,7 @@ def health_check():
         jsonify(
             {
                 "status": "healthy",
-                "service": "ACEest Fitness API V2.0.1 Backend",
+                "service": "ACEest Fitness API V2.1.2 Backend",
             }
         ),
         200,
