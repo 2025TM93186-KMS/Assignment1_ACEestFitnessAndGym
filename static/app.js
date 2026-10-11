@@ -1,386 +1,291 @@
-/* ==========================================================================
-   ACEest Fitness & Performance Automation Engine - Frontend Core
-   ========================================================================== */
+// =========================================================================
+// ACEest RUNTIME MACHINE SCRIPT ENGINE
+// =========================================================================
 
-let currentClient = null;
-let chartInstance = null;
-let loadedPrograms = {}; // Renamed from duplicate reference tracking name to prevent compilation crash
-
-const PROGRAMS = {
-            "Fat Loss (FL) – 3 day": {"factor": 22, "desc": "3-day full-body fat loss"},
-            "Fat Loss (FL) – 5 day": {"factor": 24, "desc": "5-day split, higher volume fat loss"},
-            "Muscle Gain (MG) – PPL": {"factor": 35, "desc": "Push/Pull/Legs hypertrophy"},
-            "Beginner (BG)": {"factor": 26, "desc": "3-day simple beginner full-body"}
+const AI_PROGRAM_TEMPLATES = {
+    "Fat Loss": ["Full Body HIIT", "Circuit Training", "Cardio + Weights"],
+    "Muscle Gain": ["Push/Pull/Legs", "Upper/Lower Split", "Full Body Strength"],
+    "Beginner": ["Full Body 3x/week", "Light Strength + Mobility"]
 };
 
-document.addEventListener("DOMContentLoaded", function() {
-    refreshClientList();
-    loadProgramsFromApi();
-    //handleLogin();
-});
+let currentActiveClient = "";
+let activeChartInstance = null;
 
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.getElementById('tab-' + tabId).style.display = 'block';
-
-    const btnSummary = document.getElementById('btn-summary');
-    const btnAnalytics = document.getElementById('btn-analytics');
-
-    if (tabId === 'summary') {
-        btnSummary.style.background = '#222'; btnSummary.style.color = '#d4af37'; btnSummary.style.borderBottom = '3px solid #d4af37';
-        btnAnalytics.style.background = '#111'; btnAnalytics.style.color = '#888'; btnAnalytics.style.borderBottom = '3px solid transparent';
-    } else {
-        btnAnalytics.style.background = '#222'; btnAnalytics.style.color = '#d4af37'; btnAnalytics.style.borderBottom = '3px solid #d4af37';
-        btnSummary.style.background = '#111'; btnSummary.style.color = '#888'; btnSummary.style.borderBottom = '3px solid transparent';
+/**
+ * Bootstraps and seeds the client framework payload layer
+ * to mock relational schema requirements.
+ */
+function bootApplicationStorageDB() {
+    if (!localStorage.getItem('db_clients')) {
+        localStorage.setItem('db_clients', JSON.stringify({
+            "Jane Doe": { id: 1, name: "Jane Doe", age: 28, height: 165.0, weight: 62.5, program: "Full Body HIIT", calories: 1800, target_weight: 58.0, target_adherence: 85, status: "Active", end: "2027-08-14" },
+            "Morgan Smith": { id: 2, name: "Morgan Smith", age: 32, height: 180.5, weight: 85.2, program: "Push/Pull/Legs", calories: 2700, target_weight: 80.0, target_adherence: 90, status: "Active", end: "2027-03-22" }
+        }));
+        localStorage.setItem('db_progress', JSON.stringify({
+            "Jane Doe": [{ week: "Wk 1", val: 80 }, { week: "Wk 2", val: 95 }, { week: "Wk 3", val: 85 }, { week: "Wk 4", val: 90 }],
+            "Morgan Smith": [{ week: "Wk 1", val: 70 }, { week: "Wk 2", val: 85 }, { week: "Wk 3", val: 80 }]
+        }));
+        localStorage.setItem('db_workouts', JSON.stringify({
+            "Jane Doe": [{ date: "2026-10-10", type: "Cardio", duration: 45, notes: "HIIT treadmill system circuits" }],
+            "Morgan Smith": [{ date: "2026-10-09", type: "Strength", duration: 60, notes: "Barbell compound loading sequences" }]
+        }));
     }
+    rebuildClientDropdownList();
 }
 
-function refreshClientList() {
-    fetch('/api/clients/names', { method: 'GET' })
-    .then(res => {
-        if (!res.ok) throw new Error("Backend program definitions sync failure");
-        return res.json();
-    })
-    .then(data => {
-        const combobox = document.getElementById("client-selector");
-        combobox.innerHTML = '<option value="" selected>-- Select Existing Client --</option>';
+/**
+ * Executes a role-based login validation and view swap sequence.
+ */
+/**
+ * Executes a role-based login validation and view swap sequence.
+ */
 
-        // Handles safe fallback tracking array iteration loops cleanly
-        const clients = data.clients || data.names || data;
+/**
+ * Re-reads profile descriptors from storage to refresh the dropdown menu selectors.
+ */
+function rebuildClientDropdownList() {
+    const select = document.getElementById('client-selector');
+    select.innerHTML = '<option value="">-- No Profile Selected --</option>';
+    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
 
-        clients.forEach(client => {
-            // Unpack element array row structures sent directly from SQLite data sets
-            const nameValue = (typeof client === 'object' && client !== null) ? (client.name || client[0]) : client;
-            if (nameValue) {
-                const option = document.createElement("option");
-                option.value = nameValue;
-                option.textContent = nameValue;
-                combobox.appendChild(option);
-            }
-        });
-        if (currentClient) combobox.value = currentClient;
-    })
-    .catch(err => console.error("API error loading fitness modules:", err));
+    Object.keys(clients).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.innerText = key;
+        select.appendChild(opt);
+    });
+    select.value = currentActiveClient;
 }
 
-function loadProgramsFromApi() {
-    fetch('/api/programs', { method: 'GET' })
-    .then(res => {
-        if (!res.ok) throw new Error("Backend program definitions sync failure");
-        return res.json();
-    })
-    .then(data => {
-        const combobox = document.getElementById("my-combobox");
-        combobox.innerHTML = '<option value="" disabled selected>-- Select a program --</option>';
-
-        const programList = data.programs || data;
-
-        programList.forEach(program => {
-            const option = document.createElement("option");
-            option.value = program;
-            option.textContent = program;
-            combobox.appendChild(option);
-        });
-    })
-    .catch(err => console.error("API error loading fitness modules:", err));
+/**
+ * Active element wrapper caught by select change events.
+ */
+function onClientProfileActivated(val) {
+    currentActiveClient = val;
+    synchronizeActiveClientRecord();
 }
 
-function onClientSelected(name) {
-    if (!name) return;
-    document.getElementById("client-name").value = name;
-    loadClient();
-}
-
-function saveClient() {
-    const name = document.getElementById("client-name").value.trim();
-    const program = document.getElementById("my-combobox").value;
-    const ageInput = document.getElementById("client-age").value;
-    const heightInput = document.getElementById("client-height").value;
-    const weightInput = document.getElementById("client-weight").value;
-    const targetWeight = document.getElementById("target-weight").value;
-    const targetAdherence = document.getElementById("target-adherence").value;
-    const membershipInput = document.getElementById("membership-expiry") ? document.getElementById("membership-expiry").value : "";
-
-    if (!name || !program) {
-        alert("Please fill client name and program selection targets.");
+/**
+ * Syncs active dashboard text fragments and table data loops.
+ */
+function synchronizeActiveClientRecord() {
+    if (!currentActiveClient) {
+        document.getElementById('summary-diagnostics-console').innerText = "Select an active client profile matrix from the selector console to generate dynamic diagnostic summary records...";
+        document.getElementById('workout-ledger-rows').innerHTML = '<tr><td colspan="4" style="text-align:center;" class="text-neutral-500 italic">Select active profile to render ledger tracking sequences</td></tr>';
+        if (activeChartInstance) activeChartInstance.destroy();
         return;
     }
 
-    try {
-        const payload = {
-            name: name,
-            age: parseInt(ageInput) || 0,
-            height: parseFloat(heightInput) || 0.0,
-            weight: parseFloat(weightInput) || 0.0,
-            program: program,
-            target_weight: parseFloat(targetWeight) || 0.0,
-            target_adherence: parseInt(targetAdherence) || 0,
-            membership_expiry: membershipInput
-        };
+    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
+    const data = clients[currentActiveClient];
+    if (!data) return;
 
-        fetch('/api/client', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.error || "Server validation rejected parameters"); });
-            }
-            return response.json();
-        })
-        .then(data => {
-            alert(data.message || "Client saved successfully!");
-            currentClient = name;
-            refreshClientList();
-            refreshSummary();
-        })
-        .catch(error => alert(`Error: ${error.message}`));
+    document.getElementById('summary-diagnostics-console').innerText =
+        `Name: ${data.name}\nProgram: ${data.program || 'None Assigned'}\nCalories: ${data.calories || 'N/A'}\nMembership: ${data.status}`;
 
-    } catch (e) {
-        alert("Application Execution Intercept Error: " + (e.message || e));
+    renderWorkoutLedgerTable();
+    renderPerformanceChartLoop();
+}
+
+/**
+ * Captures name variables to generate an independent database record.
+ */
+function triggerAddClient() {
+    const name = prompt("Enter client name:");
+    if (!name || name.trim() === "") return;
+
+    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
+    if (clients[name]) {
+        alert(`Client data object [${name}] already initialized.`);
+        return;
     }
+
+    clients[name] = {
+        id: Date.now(),
+        name: name,
+        age: 0, height: 0.0, weight: 0.0,
+        program: "None Assigned", calories: 2000,
+        target_weight: 0.0, target_adherence: 80,
+        status: "Active", end: "2027-12-31"
+    };
+    localStorage.setItem('db_clients', JSON.stringify(clients));
+
+    const progress = JSON.parse(localStorage.getItem('db_progress') || '{}');
+    progress[name] = [{ week: "Wk 1", val: 75 }];
+    localStorage.setItem('db_progress', JSON.stringify(progress));
+
+    const workouts = JSON.parse(localStorage.getItem('db_workouts') || '{}');
+    workouts[name] = [];
+    localStorage.setItem('db_workouts', JSON.stringify(workouts));
+
+    currentActiveClient = name;
+    rebuildClientDropdownList();
+    synchronizeActiveClientRecord();
+    alert(`Client ${name} saved successfully.`);
 }
 
-function loadClient() {
-    const name = document.getElementById("client-name").value.trim();
-    if (!name) { alert("Enter or select client name first."); return; }
+/**
+ * Uses a basic randomization loop to emulate the original script's automated assignment logic.
+ */
+function triggerAIGenerator() {
+    if (!currentActiveClient) return alert("Select a client first");
+    const keys = Object.keys(AI_PROGRAM_TEMPLATES);
+    const randomType = keys[Math.floor(Math.random() * keys.length)];
+    const list = AI_PROGRAM_TEMPLATES[randomType];
+    const chosenDetail = list[Math.floor(Math.random() * list.length)];
 
-    fetch('/api/client?name=' + encodeURIComponent(name))
-    .then(res => {
-        if (!res.ok) throw new Error("Client tracking structure not found.");
-        return res.json();
-    })
-    .then(data => {
-        const profile = data["CLIENT PROFILE"] || data;
-        currentClient = profile.name;
+    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
+    clients[currentActiveClient].program = chosenDetail;
+    localStorage.setItem('db_clients', JSON.stringify(clients));
 
-        document.getElementById("client-name").value = profile.name || "";
-        document.getElementById("client-age").value = profile.age || 0;
-        document.getElementById("client-height").value = parseFloat(profile.height) || 0.0;
-        document.getElementById("client-weight").value = parseFloat(profile.weight) || 0.0;
-        document.getElementById("my-combobox").value = profile.program || "";
-        document.getElementById("target-weight").value = profile.target_weight || 0.0;
-        document.getElementById("target-adherence").value = profile.target_adherence || 0;
-        document.getElementById("client-selector").value = profile.name;
-        if(document.getElementById("membership-expiry")) {
-            document.getElementById("membership-expiry").value = profile.membership_expiry || "";
-        }
-
-        // Process custom response format blocks cleanly to downstream output renders
-        let formattedText = `CLIENT PROFILE\n--------------\n`;
-        formattedText += `Name     : ${profile.name}\n`;
-        formattedText += `Age      : ${profile.age || '-'}\n`;
-        formattedText += `Height   : ${profile.height || '-'}\n`;
-        formattedText += `Weight   : ${profile.weight || '-'}\n`;
-        formattedText += `Program  : ${profile.program}\n`;
-        formattedText += `Calories : ${profile.calories || '0'} kcal/day\n`;
-        formattedText += `Expiry   : ${profile.membership_expiry || 'No Horizon Set'}\n\n`;
-
-        const factorMeta = PROGRAMS[profile.program];
-        if (factorMeta) {
-            formattedText += `PROGRAM DETAILS\n---------------\nStrategy : ${factorMeta.desc}\nFactor   : ${factorMeta.factor}x\n\n`;
-        }
-
-        document.getElementById("work-label").innerText = formattedText;
-        loadWorkoutHistory();
-        renderAdherenceChart();
-    })
-    .catch(err => alert(err.message));
+    alert(`Program Generated for ${currentActiveClient}: ${chosenDetail}`);
+    synchronizeActiveClientRecord();
 }
 
-function refreshSummary() {
-    if (currentClient) loadClient();
+/**
+ * Emulates the original report builder pipeline.
+ */
+function triggerPDFReport() {
+    if (!currentActiveClient) return alert("Select a client first");
+    alert(`PDF Structural Serialization complete:\n"${currentActiveClient}_report.pdf" created successfully.`);
 }
 
-function saveProgress() {
-    if (!currentClient) { alert("Load a valid client first."); return; }
-    const adherence = parseInt(document.getElementById("adherence-slider").value) || 0;
+/**
+ * Reads profile timelines to return target subscription values.
+ */
+function triggerMembershipCheck() {
+    if (!currentActiveClient) return alert("Select a client first");
+    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
+    const data = clients[currentActiveClient];
+    alert(`Membership: ${data.status}\nRenewal Date: ${data.end || 'N/A'}`);
+}
 
-    fetch('/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: currentClient, adherence: adherence })
-    })
-    .then(res => res.json())
-    .then(() => {
-        alert("Weekly progress logged successfully!");
-        refreshSummary();
+/**
+ * Re-renders the rows inside the workout table.
+ */
+function renderWorkoutLedgerTable() {
+    const tbody = document.getElementById('workout-ledger-rows');
+    tbody.innerHTML = "";
+    const workoutList = JSON.parse(localStorage.getItem('db_workouts') || '{}')[currentActiveClient] || [];
+
+    if (workoutList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;" class="text-neutral-500 italic">No historical data logs recorded.</td></tr>';
+        return;
+    }
+
+    workoutList.forEach(w => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${w.date}</td><td>${w.type}</td><td style="text-align:center;">${w.duration} min</td><td>${w.notes}</td>`;
+        tbody.appendChild(tr);
     });
 }
 
-function loadWorkoutHistory() {
-    if (!currentClient) return;
-    fetch('/api/workout?name=' + encodeURIComponent(currentClient))
-    .then(res => res.json())
-    .then(data => {
-        const tbody = document.querySelector("#workout-history-table tbody");
-        tbody.innerHTML = "";
-        const history = data["workout_history"] || data;
-        if (!history || history.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding: 8px; text-align: center;">No history logs loaded</td></tr>';
-            return;
-        }
-        history.forEach(w => {
-            let row = `<tr>
-                <td style="padding:8px; border-bottom:1px solid #333;">${w[0] || w.date}</td>
-                <td style="padding:8px; border-bottom:1px solid #333;">${w[1] || w.workout_type}</td>
-                <td style="padding:8px; border-bottom:1px solid #333; text-align:center;">${w[2] || w.duration_min}</td>
-                <td style="padding:8px; border-bottom:1px solid #333;">${w[3] || w.notes || ''}</td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
-    });
+/**
+ * Initializes form validation defaults inside open input modals.
+ */
+function openLogWorkoutWindow() {
+    if (!currentActiveClient) return alert("Select an active client target frame first.");
+    document.getElementById('modal-workout-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modal-workout-duration').value = "60";
+    document.getElementById('modal-workout-notes').value = "";
+    document.getElementById('workout-modal').classList.remove('hidden');
 }
 
-function openLogWorkoutModal() {
-if (!currentClient) { alert("Select a client first."); return; }
-document.getElementById("workout-modal").style.display = "flex";
+/**
+ * Appends a new item payload directly to your workspace tracking histories.
+ */
+function commitWorkoutEntry() {
+    const dateVal = document.getElementById('modal-workout-date').value;
+    const typeVal = document.getElementById('modal-workout-type').value;
+    const durVal = parseInt(document.getElementById('modal-workout-duration').value) || 60;
+    const notesVal = document.getElementById('modal-workout-notes').value || "N/A";
+
+    const workouts = JSON.parse(localStorage.getItem('db_workouts') || '{}');
+    if (!workouts[currentActiveClient]) workouts[currentActiveClient] = [];
+
+    workouts[currentActiveClient].unshift({ date: dateVal, type: typeVal, duration: durVal, notes: notesVal });
+    localStorage.setItem('db_workouts', JSON.stringify(workouts));
+
+    closeModalWindow('workout-modal');
+    renderWorkoutLedgerTable();
 }
-function submitWorkout() {
-const payload = {
-name: currentClient,
-workout: document.getElementById("modal-w-type").value,
-duration: parseInt(document.getElementById("modal-w-dur").value) || 60,
-notes: document.getElementById("modal-w-notes").value,
-ex_name: document.getElementById("modal-w-ex-name").value,
-ex_sets: parseInt(document.getElementById("modal-w-sets").value) || 0,
-ex_reps: parseInt(document.getElementById("modal-w-reps").value) || 0,
-ex_weight: parseFloat(document.getElementById("modal-w-weight").value) || 0.0
-};
-fetch('/api/workout', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(payload)
-}).then(() => {
-alert("Workout successfully saved.");
-document.getElementById("workout-modal").style.display = "none";
-loadWorkoutHistory();
-});
+
+/**
+ * Replicates the Tkinter Notebook widget tab switches.
+ */
+function switchNotebookTab(targetId) {
+    document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.notebook-pane').forEach(pane => pane.classList.remove('active'));
+
+    document.getElementById(`tab-btn-${targetId}`).classList.add('active');
+    document.getElementById(`notebook-tab-${targetId}`).classList.add('active');
+
+    if (targetId === 'summary') {
+renderPerformanceChartLoop();
 }
-function openLogMetricsModal() {
-if (!currentClient) { alert("Select a client first."); return; }
-document.getElementById("modal-m-weight").value = parseFloat(document.getElementById("client-weight").value) || 0.0;
-document.getElementById("metrics-modal").style.display = "flex";
 }
-function submitMetrics() {
-const payload = {
-name: currentClient,
-date: new Date().toISOString().split('T')[0],
-weight: parseFloat(document.getElementById("modal-m-weight").value) || 0,
-waist: parseFloat(document.getElementById("modal-m-waist").value) || 0,
-body_fat: parseFloat(document.getElementById("modal-m-bf").value) || 0
-};
-fetch('/api/metrics', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(payload)
-}).then(() => {
-alert("Metrics logged safely.");
-document.getElementById("metrics-modal").style.display = "none";
-refreshSummary();
-});
-}
-function initChartContext(title, type, labels, data, labelName, color) {
-if (chartInstance) chartInstance.destroy();
-document.getElementById("chart-title").innerText = title;
-const ctx = document.getElementById('analyticsChart').getContext('2d');
-chartInstance = new Chart(ctx, {
+/**
+• Captures historical indices to re-draw linear chart lines over canvas grids.
+*/
+function renderPerformanceChartLoop() {
+if (!currentActiveClient) return;
+const ctx = document.getElementById('analyticsAdherenceChart').getContext('2d');
+if (activeChartInstance) activeChartInstance.destroy();const trackData = JSON.parse(localStorage.getItem('db_progress') || '{}')[currentActiveClient] || [];
+const labels = trackData.map(item => item.week);
+const values = trackData.map(item => item.val);activeChartInstance = new Chart(ctx, {
 type: 'line',
 data: {
 labels: labels,
 datasets: [{
-label: labelName,
-data: data,
-borderColor: color || '#1d4ed8',
-backgroundColor: 'rgba(29, 78, 216, 0.1)',
+label: 'Weekly Adherence (%)',
+data: values,
+borderColor: '#d4af37',
+backgroundColor: 'rgba(212, 175, 55, 0.08)',
 borderWidth: 2,
-pointBackgroundColor: color || '#1d4ed8',
-pointBorderColor: '#ffffff',
-pointBorderWidth: 1.5,
-pointRadius: 5,
-tension: 0,
-fill: true
+fill: true,
+tension: 0.15
 }]
 },
 options: {
 responsive: true,
 maintainAspectRatio: false,
 scales: {
-y: {
-ticks: { color: '#000000' },
-grid: { color: '#cccccc' }
+y: { min: 0, max: 100, grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } },
+x: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } }
 },
-x: {
-ticks: { color: '#000000' },
-grid: { color: '#cccccc' }
-}
-}
+plugins: { legend: { display: false } }
 }
 });
 }
-function renderAdherenceChart() {
-if (!currentClient) return;
-fetch('/api/progress?name=' + encodeURIComponent(currentClient))
-.then(res => res.json())
-.then(data => {
-const history = data.progress || [];
-const weeks = history.map(h => h.week);
-const adherence = history.map(h => h.adherence);
-initChartContext("Weekly Adherence – " + currentClient, 'line', weeks, adherence, 'Adherence (%)', '#d4af37');
-});
+/**
+• Utility helper to close targeted window models.
+*/
+function closeModalWindow(id) {
+document.getElementById(id).classList.add('hidden');
 }
-function renderWeightChart() {
-if (!currentClient) return;
-fetch('/api/weight?name=' + encodeURIComponent(currentClient))
-.then(res => res.json())
-.then(data => {
-const history = data.weight_chart || [];
-const dates = history.map(h => h[0] || h.date);
-const weights = history.map(h => h[1] || h.weight);
-initChartContext("Weight Trend – " + currentClient, 'line', dates, weights, 'Weight (kg)', '#ff9800');
-});
-}
-function showBMIInfo() {
-if (!currentClient) return;
-fetch('/api/bmi?name=' + encodeURIComponent(currentClient))
-.then(res => res.json())
-.then(data => {
-alert(data["BMI Info"] || data.error);
-});
-}
+// Ensure the page boots strictly directly into the authentication layout context
+/*document.addEventListener("DOMContentLoaded", function() {
+document.getElementById('login-screen').classList.remove('hidden');
+document.getElementById('login-screen').style.display = 'flex';
+document.getElementById('app-container').classList.add('hidden');
+document.getElementById('app-container').style.display = 'none';
+});*/
 
-// LOGIN
-// Synchronous Authorization Profile Session Verifier
-function handleLogin() {
-    const userField = document.getElementById("username").value.trim();
-    const passField = document.getElementById("password").value.trim();
+function executeLogin() {
+    const user = document.getElementById('auth-username').value.trim();
+    const pass = document.getElementById('auth-password').value.trim();
 
-    if (!userField || !passField) {
-        alert("Authentication Error: Configuration credentials cannot be left blank.");
-        return;
+    if (user === "admin" && pass === "admin") {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        document.getElementById('app-title-header').innerText = "ACEest Dashboard (Admin)";
+        bootApplicationStorageDB();
+    } else {
+        alert("Login Failed: Invalid credentials layout parameters.");
     }
-
-    // Ping authorization tables via login pipelines
-    fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userField, password: passField })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("Invalid Administrative credentials configured.");
-        return res.json();
-    })
-    .then(data => {
-        // Unlocks active dashboard view metrics on confirmation signals
-        document.getElementById("login-modal").style.display = "none";
-        document.getElementById("application-status-log").innerText = `[Authenticated]: Active Admin Role Loaded`;
-
-        // Populate core database lists natively
-        refreshClientList();
-        loadProgramsFromApi();
-    })
-    .catch(err => {
-        alert("Access Denied: " + err.message);
-    });
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+});

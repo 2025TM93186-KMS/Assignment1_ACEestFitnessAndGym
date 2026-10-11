@@ -3,275 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACEest Fitness & Performance Dashboard</title>
-    <!-- Tailwind CSS for robust structure -->
-    <script src="https://tailwindcss.com"></script>
-    <!-- Chart.js for visualization rendering loops -->
-     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Modular Link to external stylesheet -->
+    <title>ACEest Fitness & Performance</title>
+    <!-- FIX: Updated to official Tailwind CSS Play CDN compile script -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Reference link to external application configuration style panel -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="min-h-screen flex flex-col justify-between">
 
-    <!-- HEADER BLOCK -->
-    <header class="gold-bg text-black px-6 py-4 flex justify-between items-center shadow-lg">
-        <div>
-            <h1 class="text-2xl font-bold tracking-wider uppercase">ACEest Fitness Dashboard</h1>
-            <p class="text-xs font-semibold tracking-widest text-black/70">PERFORMANCE ENGINE CONSOLE</p>
+    <!-- ---------- EXACT DESKTOP STYLE LOGIN SCREEN ---------- -->
+    <div id="login-screen" class="flex flex-col items-center justify-center flex-1">
+        <div class="login-wrapper">
+            <h1 class="login-title-text">ACEest Login</h1>
+
+            <div class="input-element-group">
+                <label>Username</label>
+                <input type="text" id="auth-username" value="admin" autocomplete="off">
+            </div>
+
+            <div class="input-element-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" value="admin">
+            </div>
+
+            <div class="btn-centering-wrapper">
+                <button onclick="executeLogin()" class="login-submit-btn">Login</button>
+            </div>
         </div>
-        <div class="text-right">
-            <span class="bg-black text-[#d4af37] px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider">Status: Online</span>
-        </div>
-    </header>
+    </div>
 
-    <!-- MAIN WORKSPACE LAYOUT CONTAINER -->
-        <!-- MAIN WORKSPACE LAYOUT CONTAINER (Fixed Conflict Layer) -->
-    <main class="main-container">
+    <!-- ---------- CORE APPLICATION WORKSPACE MANAGEMENT CONTAINER ---------- -->
+    <div id="app-container" class="hidden flex-col flex-1">
+        <!-- HEADER ROW BLOCK -->
+        <header class="gold-bg text-black px-6 py-4 flex justify-between items-center shadow-lg">
+            <h1 id="app-title-header" class="text-2xl font-bold tracking-wider uppercase">ACEest Dashboard (Admin)</h1>
+            <span class="bg-black text-[#d4af37] px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider">System Engine: Online</span>
+        </header>
 
-        <!-- LEFT PANEL: CLIENT PROFILE OPERATIONS (group-box layout) -->
-        <section class="left-panel group-box flex flex-col">
-            <span class="group-box-title">Client Management</span>
+        <!-- MAIN LAYOUT PANELS -->
+        <main class="main-container">
+            <!-- SIDEBAR CONTROL COLUMN -->
+            <section class="left-panel group-box flex flex-col space-y-4">
+                <span class="group-box-title">Client Selection Operations</span>
 
-            <div class="input-group pt-2">
-                <label>Select Active Profile</label>
-                <select id="client-selector" onchange="onClientSelected(this.value)" class="combobox"></select>
-            </div>
-
-            <hr class="border-neutral-800 my-2">
-
-            <div class="input-group">
-                <label>Client Name</label>
-                <input type="text" id="client-name" placeholder="e.g. John Doe">
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
                 <div class="input-group">
-                    <label>Age (yrs)</label>
-                    <input type="number" id="client-age" value="0">
-                </div>
-                <div class="input-group">
-                    <label>Height (cm)</label>
-                    <input type="number" step="0.1" id="client-height" value="0.0">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="input-group">
-                    <label>Weight (kg)</label>
-                    <input type="number" step="0.1" id="client-weight" value="0.0">
-                </div>
-                <div class="input-group">
-                    <label>Target Weight (kg)</label>
-                    <input type="number" step="0.1" id="target-weight" value="0.0">
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Assigned Program</label>
-                <select id="my-combobox" class="combobox"></select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="input-group">
-                    <label>Target Adherence %</label>
-                    <input type="number" id="target-adherence" value="0">
-                </div>
-                <div class="input-group">
-                    <label>Membership Expiry</label>
-                    <input type="date" id="membership-expiry">
-                </div>
-            </div>
-
-            <div class="button-group pt-1">
-                <button onclick="saveClient()" class="btn btn-save">Save Client Profile</button>
-                <button onclick="loadClient()" class="btn btn-reset">Force Sync Profile</button>
-            </div>
-
-            <div class="pt-2 border-t border-neutral-800 input-group">
-                <label id="adherence-label">Weekly Adherence: 50%</label>
-                <input type="range" id="adherence-slider" min="0" max="100" value="50" oninput="document.getElementById('adherence-label').innerText = 'Weekly Adherence: ' + this.value + '%'">
-                <button onclick="saveProgress()" class="w-full mt-3 bg-emerald-700 text-white font-bold p-2.5 rounded text-xs uppercase tracking-wider hover:bg-emerald-800 transition">Save Weekly Progress</button>
-            </div>
-        </section>
-
-        <!-- RIGHT PANEL: INTERACTIVE DASHBOARD SYSTEM DATA PANELS -->
-        <section class="right-panel">
-
-            <!-- Dynamic Actions Panel Bar -->
-            <div class="flex flex-wrap gap-3 bg-neutral-900 p-3 rounded-md border border-neutral-800">
-                <button onclick="openLogWorkoutModal()" class="bg-neutral-800 border border-neutral-700 text-[#d4af37] px-4 py-2.5 rounded text-xs font-bold uppercase tracking-wider hover:bg-neutral-700 transition">Log Workout Session</button>
-                <button onclick="openLogMetricsModal()" class="bg-neutral-800 border border-neutral-700 text-[#d4af37] px-4 py-2.5 rounded text-xs font-bold uppercase tracking-wider hover:bg-neutral-700 transition">Log Body Metrics</button>
-                <button onclick="showBMIInfo()" class="bg-neutral-800 border border-neutral-700 text-white px-4 py-2.5 rounded text-xs font-bold uppercase tracking-wider hover:bg-neutral-700 transition">Calculate BMI & Risk Analysis</button>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Profile Abstract Dynamic Terminal Area -->
-                <div class="flex flex-col">
-                    <span class="text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Client Execution Ledger Summary</span>
-                    <div id="work-label" class="scrollable-block rounded p-4 h-[220px] overflow-y-auto">— No Active Client Data Synchronized into Ledger —</div>
+                    <label>Select Target Active Profile</label>
+                    <select id="client-selector" onchange="onClientProfileActivated(this.value)" class="combobox">
+                        <option value="">-- No Profile Selected --</option>
+                    </select>
                 </div>
 
-                <!-- Live Workout History Log Array Data Window -->
-                <div class="flex flex-col">
-                    <span class="text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Historical Workout Log Ledger</span>
-                    <div class="table-scroll-wrapper">
-                        <table id="workout-history-table">
+                <hr class="border-neutral-800 my-1">
+
+                <div class="flex flex-col gap-2.5">
+                    <button onclick="triggerAddClient()" class="btn btn-save">Add / Save Client</button>
+                    <button onclick="triggerAIGenerator()" class="btn btn-action">Generate AI Program</button>
+                    <button onclick="triggerPDFReport()" class="btn btn-action">Generate PDF Report</button>
+                    <button onclick="triggerMembershipCheck()" class="btn btn-action">Check Membership</button>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL SYSTEM NOTEBOOK LAYER -->
+            <section class="right-panel group-box flex flex-col">
+                <!-- TKINTER STYLE NOTEBOOK TAB SELECTOR HEADERS -->
+                <div class="tabs-notebook-header">
+                    <button id="tab-btn-summary" onclick="switchNotebookTab('summary')" class="tab-link active">Client Summary</button>
+                    <button id="tab-btn-workouts" onclick="switchNotebookTab('workouts')" class="tab-link">Workouts & Exercises</button>
+                </div>
+
+                <!-- NOTEBOOK CONTENT BLOCKS -->
+                <div id="notebook-tab-summary" class="notebook-pane active">
+                    <div id="summary-diagnostics-console" class="scrollable-block rounded p-4 h-[180px] overflow-y-auto mb-4">Select an active client profile matrix...</div>
+                    <div class="flex flex-col bg-[#111111] border border-neutral-800 p-4 rounded flex-1">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Weekly Adherence Tracker Engine</span>
+                        <div class="chart-container">
+                            <canvas id="analyticsAdherenceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="notebook-tab-workouts" class="notebook-pane flex flex-col space-y-4">
+                    <div class="flex justify-between items-center border-b border-neutral-800 pb-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Historical Workout Activity Table</span>
+                        <button onclick="openLogWorkoutWindow()" class="bg-[#d4af37] text-black font-bold px-4 py-1.5 rounded text-xs uppercase tracking-wider hover:opacity-90 transition">Add Workout</button>
+                    </div>
+                    <div class="table-scroll-wrapper flex-1">
+                        <table>
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Focus Focus</th>
+                                    <th>Focus / Type</th>
                                     <th style="text-align:center;">Duration</th>
                                     <th>Target Notes</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="workout-ledger-rows">
                                 <tr>
-                                    <td colspan="4" style="text-align:center;" class="text-gray-500 italic">Select profile to render ledger tracking sequences</td>
+                                    <td colspan="4" style="text-align:center;" class="text-neutral-500 italic">Select active profile to render ledger tracking sequences</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- FIXED: ISOLATED WORKOUT DATA PORT MODAL -->
+    <div id="workout-modal" class="modal hidden">
+        <div class="modal-dialog-box">
+            <h3 class="modal-header-title">Add Workout Entry</h3>
+            <div class="input-group">
+                <label>Date (YYYY-MM-DD)</label>
+                <input type="date" id="modal-workout-date">
             </div>
-
-            <!-- Visual Performance Metrics Target Chart Module Container -->
-            <div class="group-box p-5 bg-[#111111] flex flex-col space-y-4">
-                <div class="flex justify-between items-center border-b border-neutral-800 pb-2">
-                    <h3 id="chart-title" class="text-sm font-bold uppercase tracking-wider gold-accent">Performance Analytics Engine View</h3>
-                    <div class="flex gap-2">
-                        <button onclick="renderAdherenceChart()" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition">View Adherence Chart</button>
-                        <button onclick="renderWeightChart()" class="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition">View Weight Trend Chart</button>
-                    </div>
-                </div>
-                <div class="chart-container">
-                    <canvas id="analyticsChart"></canvas>
-                </div>
-            </div>
-        </section>
-    </main>
-
-
-
-
-    <!-- Log Workout Modal -->
-        <div id="workout-modal" class="modal-overlay">
-        <div class="modal-card p-6 rounded-md w-full max-w-md flex flex-col space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider gold-accent border-b border-neutral-800 pb-2">Log Training Session Parameters</h3>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Workout Focus Type</label>
-                <select id="modal-w-type" class="w-full p-2 rounded text-sm">
-                    <option value="Strength">Strength Focus</option>
-                    <option value="Hypertrophy">Hypertrophy Block</option>
-                    <option value="Conditioning">Conditioning Phase</option>
-                    <option value="Mixed">Mixed Energy Systems</option>
-                    <option value="Mobility">Mobility Work</option>
+            <div class="input-group">
+                <label>Workout Type Focus</label>
+                <select id="modal-workout-type" class="combobox">
+                    <option value="Strength">Strength</option>
+                    <option value="Hypertrophy">Hypertrophy</option>
+                    <option value="Cardio">Cardio</option>
+                    <option value="Mobility">Mobility</option>
                 </select>
             </div>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Duration (min)</label>
-                <input type="number" id="modal-w-dur" value="60" class="w-full p-2 rounded text-sm">
+            <div class="input-group">
+                <label>Duration (min)</label>
+                <input type="number" id="modal-workout-duration" value="60">
             </div>
-
-            <div class="p-3 bg-neutral-900 rounded border border-neutral-800 space-y-3">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Exercise Metrics</p>
-                <div>
-                    <label class="block text-[11px] text-gray-400 mb-0.5">Exercise Focus Name</label>
-                    <input type="text" id="modal-w-ex-name" placeholder="e.g. Bench Press" class="w-full p-1.5 rounded text-xs">
-                </div>
-                <div class="grid grid-cols-3 gap-2">
-                    <div>
-                        <label class="block text-[11px] text-gray-400 mb-0.5">Sets</label>
-                        <input type="number" id="modal-w-sets" value="3" class="w-full p-1.5 rounded text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] text-gray-400 mb-0.5">Reps</label>
-                        <input type="number" id="modal-w-reps" value="10" class="w-full p-1.5 rounded text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] text-gray-400 mb-0.5">Load (kg)</label>
-                        <input type="number" step="0.1" id="modal-w-weight" value="0.0" class="w-full p-1.5 rounded text-xs">
-                    </div>
-                </div>
+            <div class="input-group">
+                <label>Target Execution Notes</label>
+                <textarea id="modal-workout-notes" rows="3" placeholder="Enter session comments..."></textarea>
             </div>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Session Target Notes</label>
-                <textarea id="modal-w-notes" rows="2" placeholder="Enter notes..." class="w-full p-2 rounded text-sm bg-neutral-700"></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 pt-2">
-                <button onclick="submitWorkout()" class="gold-bg text-black font-bold p-2.5 rounded text-xs uppercase tracking-wider hover:bg-[#bfa032] transition">Commit Logs</button>
-                <button onclick="document.getElementById('workout-modal').style.display = 'none'" class="bg-neutral-800 border border-neutral-700 text-white p-2.5 rounded text-xs uppercase tracking-wider hover:bg-neutral-700 transition">Cancel</button>
+            <div class="flex gap-3 pt-2">
+                <button onclick="commitWorkoutEntry()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold p-2.5 rounded text-xs uppercase tracking-wider transition">Save Workout</button>
+                <button onclick="closeModalWindow('workout-modal')" class="w-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold p-2.5 rounded text-xs uppercase tracking-wider transition">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Log Body Metrics Modal -->
-    <div id="metrics-modal" class="modal-overlay">
-        <div class="modal-card p-6 rounded-md w-full max-w-sm flex flex-col space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider gold-accent border-b border-neutral-800 pb-2">Log Current Physical Biometrics</h3>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Scale Weight (kg)</label>
-                <input type="number" step="0.1" id="modal-m-weight" value="0.0" class="w-full p-2 rounded text-sm">
-            </div>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Waist Circumference (cm)</label>
-                <input type="number" step="0.1" id="modal-m-waist" value="0.0" class="w-full p-2 rounded text-sm">
-            </div>
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Bodyfat Percentage (%)</label>
-                <input type="number" step="0.1" id="modal-m-bf" value="0.0" class="w-full p-2 rounded text-sm">
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 pt-2">
-                <button onclick="submitMetrics()" class="gold-bg text-black font-bold p-2.5 rounded text-xs uppercase tracking-wider hover:bg-[#bfa032] transition">Commit Metrics</button>
-                <button onclick="document.getElementById('metrics-modal').style.display = 'none'" class="bg-neutral-800 border border-neutral-700 text-white p-2.5 rounded text-xs uppercase tracking-wider hover:bg-neutral-700 transition">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOGIN -->
-        <!-- AUTHENTICATION DIALOG BLOCK (tk.Toplevel Login Modal Mirror) -->
-    <div id="login-modal" class="modal-overlay flex">
-        <div class="modal-card p-8 rounded shadow-2xl w-full max-w-sm border-t-4 border-[#d4af37]">
-            <h2 class="text-xl font-bold text-center mb-6 gold-accent tracking-wide uppercase">ACEest Console Login</h2>
-
-            <div class="input-group mb-4">
-                <label class="block text-xs uppercase tracking-wider mb-2 text-gray-400">Username</label>
-                <input type="text" id="username" placeholder="Enter username..." value="admin" class="w-full">
-            </div>
-
-            <div class="input-group mb-6">
-                <label class="block text-xs uppercase tracking-wider mb-2 text-gray-400">Password</label>
-                <input type="password" id="password" placeholder="Enter password..." value="admin" class="w-full">
-            </div>
-
-            <button onclick="handleLogin()" class="btn btn-save w-full uppercase tracking-wider text-sm p-3">
-                Authorize Session
-            </button>
-
-            <p class="text-center text-[11px] text-neutral-500 mt-4 uppercase font-mono">Default Stack profile: admin / admin</p>
-        </div>
-    </div>
-
-
-    <!-- APPLICATION FOOTER LAYER -->
-    <footer class="bg-neutral-900 border-t border-neutral-800 px-6 py-2.5 flex justify-between items-center text-xs tracking-wide">
-        <div class="flex items-center space-x-2">
-            <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span class="text-[#d4af37] font-semibold">[Engine Output Event Logs]: Ready</span>
-        </div>
-        <div class="text-neutral-500 text-[10px] uppercase font-bold tracking-wider">ACEest Fitness App Layer V3 Local System</div>
-    </footer>
-
-    <!-- Core Automation Scripts Connector -->
+    <!-- Reference linked script engine -->
     <script src="/static/app.js"></script>
 </body>
 </html>
-
-
