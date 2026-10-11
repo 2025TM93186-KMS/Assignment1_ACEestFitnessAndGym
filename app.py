@@ -7,6 +7,11 @@ import csv
 import sqlite3
 from datetime import datetime
 
+import base64
+import matplotlib
+matplotlib.use('Agg') # Prevents desktop GUI windows from opening
+import matplotlib.pyplot as plt
+
 app = Flask(__name__)
 CORS(app)  # Eliminates Cross-Origin blocking parameters for client integrations
 CLIENTS_DB = []
@@ -247,13 +252,12 @@ def save_progress():
 # region V2.2.1
 @app.route("/api/progress", methods=["GET"])
 def load_progress():
-    ensure_db_initialized()
     name = request.args.get("name")
     if not name:
         return jsonify({"error": "Missing required 'name' filter parameter"}), 400
 
     try:
-        with get_db_connection() as conn:
+        with get_db() as conn:
             rows = conn.execute("""
                 SELECT id, week, adherence 
                 FROM progress 
@@ -273,13 +277,12 @@ def load_progress():
 
 @app.route("/api/progress/export", methods=["GET"])
 def export_progress():
-    ensure_db_initialized()
     name = request.args.get("name")
     if not name:
         return jsonify({"error": "Missing required 'name' filter parameter"}), 400
 
     try:
-        with get_db_connection() as conn:
+        with get_db() as conn:
             rows = conn.execute("""
                 SELECT week, adherence 
                 FROM progress 
@@ -312,6 +315,53 @@ def export_progress():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/progress_chart', methods=['GET'])
+def get_progress_chart():
+    name = request.args.get("name")
+    if not name:
+        return jsonify({"error": "Missing required 'name' filter parameter"}), 400
+
+    try:
+        with get_db() as conn:
+            rows = conn.execute("""
+                    SELECT id, week, adherence 
+                    FROM progress 
+                    WHERE client_name = ? 
+                    ORDER BY id ASC
+                """, (name,)).fetchall()
+
+
+            for row in rows:
+                weeks= row["week"]
+                adherence = row["adherence"]
+
+
+        plt.figure(figsize=(8, 4))
+        plt.plot(weeks, adherence, marker="o", linewidth=2)
+        plt.title(f"Weekly Adherence Progress – {name}")
+        plt.xlabel("Week")
+        plt.ylabel("Adherence (%)")
+        plt.ylim(0, 100)
+        plt.grid(True)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+
+        # Save chart to a memory buffer instead of plt.show()
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight')
+        buf.seek(0)
+        image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close()
+
+        return jsonify({
+            "image": f"data:image/png;base64,{image_base64}"
+        })
+    except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+
 # endregion
 
 

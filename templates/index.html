@@ -58,9 +58,10 @@
 
                 <!-- Interface Control Buttons -->
                 <div class="button-group">
-                    <button type="button" class="btn btn-save" onclick="saveClient()">Save Client</button>
+                    <button type="button" class="btn btn-export" onclick="saveClient()">Save Client</button>
                     <button type="button" class="btn btn-export" onclick="loadClient()">Load Client</button>
-                    <button type="button" class="btn btn-reset" onclick="saveProgress()">Save Progress</button>
+                    <button type="button" class="btn btn-export" onclick="saveProgress()">Save Progress</button>
+                    <button type="button" class="btn btn-export" onclick="viewProgress()">View Progress Chart</button>
                 </div>
             </form>
         </aside>
@@ -72,6 +73,14 @@
             <div class="group-box text-block-frame">
                 <span class="group-box-title"> Client Summary </span>
                 <div id="work-label" class="scrollable-block">—</div>
+            </div>
+
+            <!-- <div style="width: 800px; max-width: 100%; margin: 0 auto; background-color: white;">
+                <canvas id="adherenceChart"></canvas>
+            </div> -->
+
+            <div style="margin-top: 20px;">
+                <img id="matplotlibChart" src="" alt="Chart will appear here" style="max-width:100%; display:none;">
             </div>
 
             <!-- Diet Chart Display Box (Tamil Nadu Context) -->
@@ -252,6 +261,99 @@
                 return;
             }
         }
+
+        // Move this variable outside the function to keep track of the active chart instance
+            let adherenceChartInstance = null;
+
+
+        function viewProgress_CORRECT() {
+            const name = document.getElementById("client-name").value.trim();
+            if (!name) return alert("Please enter a name");
+
+            fetch('/api/progress?name=' + encodeURIComponent(name))
+                .then(response => response.json())
+                .then(data => {
+                    const chartImg = document.getElementById('matplotlibChart');
+
+                    // Inject the Base64 image string directly into the image source
+                    chartImg.src = data.image;
+                    chartImg.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error("Error loading graph:", error);
+                });
+        }
+
+        function viewProgress() {
+                const name = document.getElementById("client-name").value.trim();
+                if (!name) {
+                    alert("Please enter a client name.");
+                    return;
+                }
+
+                fetch('/api/progress_chart?name=' + encodeURIComponent(name), {
+                    method: 'GET'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.error || "Server validation error"); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.image) {
+                        throw new Error("No chart image data received from the server.");
+                    }
+
+                    //const newWindow = window.open();
+
+                    const windowFeatures = "width=850,height=520,resizable=yes,scrollbars=no,status=no,toolbar=no,menubar=no";
+                    const newWindow = window.open("", "MatplotlibFigure", windowFeatures);
+
+                    if (newWindow) {
+                        newWindow.document.write(`
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>Weekly Adherence Progress – ${name}</title>
+                                <style>
+                                    body {
+                                        margin: 0;
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        height: 100vh;
+                                        background-color: #f0f0f0;
+                                        font-family: sans-serif;
+                                    }
+                                    img {
+                                        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                                        background: white;
+                                        padding: 10px;
+                                        border-radius: 4px;
+                                        max-width: 90%;
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <img src="${data.image}" alt="Matplotlib Chart">
+                            </body>
+                            </html>
+                        `);
+                        newWindow.document.close(); // Tells the browser parsing is finished
+                    } else {
+                        alert("Pop-up blocked! Please allow pop-ups for this website to view the progress chart.");
+                    }
+                })
+                .catch(error => {
+                    console.error("View Progress Error:", error);
+                    alert(`Error: ${error.message}`);
+                });
+            }
+
+
+
+
 
 
 

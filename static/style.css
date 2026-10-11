@@ -202,3 +202,10 @@ header h1 {
 .error-message {
     color: #ff4a4a !important;
 }
+
+/* Replicates figsize=(8, 4) aspect ratio and controls chart size */
+.chart-container {
+    width: 800px;
+    max-width: 100%;
+    margin: 0 auto;
+}
