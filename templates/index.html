@@ -235,6 +235,31 @@
         </div>
     </div>
 
+    <!-- LOGIN -->
+        <!-- AUTHENTICATION DIALOG BLOCK (tk.Toplevel Login Modal Mirror) -->
+    <div id="login-modal" class="modal-overlay flex">
+        <div class="modal-card p-8 rounded shadow-2xl w-full max-w-sm border-t-4 border-[#d4af37]">
+            <h2 class="text-xl font-bold text-center mb-6 gold-accent tracking-wide uppercase">ACEest Console Login</h2>
+
+            <div class="input-group mb-4">
+                <label class="block text-xs uppercase tracking-wider mb-2 text-gray-400">Username</label>
+                <input type="text" id="username" placeholder="Enter username..." value="admin" class="w-full">
+            </div>
+
+            <div class="input-group mb-6">
+                <label class="block text-xs uppercase tracking-wider mb-2 text-gray-400">Password</label>
+                <input type="password" id="password" placeholder="Enter password..." value="admin" class="w-full">
+            </div>
+
+            <button onclick="handleLogin()" class="btn btn-save w-full uppercase tracking-wider text-sm p-3">
+                Authorize Session
+            </button>
+
+            <p class="text-center text-[11px] text-neutral-500 mt-4 uppercase font-mono">Default Stack profile: admin / admin</p>
+        </div>
+    </div>
+
+
     <!-- APPLICATION FOOTER LAYER -->
     <footer class="bg-neutral-900 border-t border-neutral-800 px-6 py-2.5 flex justify-between items-center text-xs tracking-wide">
         <div class="flex items-center space-x-2">

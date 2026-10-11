@@ -16,6 +16,7 @@ const PROGRAMS = {
 document.addEventListener("DOMContentLoaded", function() {
     refreshClientList();
     loadProgramsFromApi();
+    //handleLogin();
 });
 
 function switchTab(tabId) {
@@ -347,4 +348,39 @@ fetch('/api/bmi?name=' + encodeURIComponent(currentClient))
 .then(data => {
 alert(data["BMI Info"] || data.error);
 });
+}
+
+// LOGIN
+// Synchronous Authorization Profile Session Verifier
+function handleLogin() {
+    const userField = document.getElementById("username").value.trim();
+    const passField = document.getElementById("password").value.trim();
+
+    if (!userField || !passField) {
+        alert("Authentication Error: Configuration credentials cannot be left blank.");
+        return;
+    }
+
+    // Ping authorization tables via login pipelines
+    fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userField, password: passField })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("Invalid Administrative credentials configured.");
+        return res.json();
+    })
+    .then(data => {
+        // Unlocks active dashboard view metrics on confirmation signals
+        document.getElementById("login-modal").style.display = "none";
+        document.getElementById("application-status-log").innerText = `[Authenticated]: Active Admin Role Loaded`;
+
+        // Populate core database lists natively
+        refreshClientList();
+        loadProgramsFromApi();
+    })
+    .catch(err => {
+        alert("Access Denied: " + err.message);
+    });
 }
