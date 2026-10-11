@@ -30,7 +30,8 @@ function bootApplicationStorageDB() {
             "Morgan Smith": [{ date: "2026-10-09", type: "Strength", duration: 60, notes: "Barbell compound loading sequences" }]
         }));
     }
-    rebuildClientDropdownList();
+    //rebuildClientDropdownList();
+    refreshClientList();
 }
 
 /**
@@ -62,7 +63,9 @@ function rebuildClientDropdownList() {
  */
 function onClientProfileActivated(val) {
     currentActiveClient = val;
-    synchronizeActiveClientRecord();
+    //synchronizeActiveClientRecord();
+    //refreshClientList();
+    loadClient();
 }
 
 /**
@@ -90,64 +93,132 @@ function synchronizeActiveClientRecord() {
 /**
  * Captures name variables to generate an independent database record.
  */
+/**
+ * Captures name inputs via dialog to generate an independent database record on the API backend.
+ */
 function triggerAddClient() {
     const name = prompt("Enter client name:");
     if (!name || name.trim() === "") return;
 
-    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
-    if (clients[name]) {
-        alert(`Client data object [${name}] already initialized.`);
-        return;
-    }
+    fetch("/api/client", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({
+            name: name
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || "Save execution failure"); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        currentActiveClient = name;
 
-    clients[name] = {
-        id: Date.now(),
-        name: name,
-        age: 0, height: 0.0, weight: 0.0,
-        program: "None Assigned", calories: 2000,
-        target_weight: 0.0, target_adherence: 80,
-        status: "Active", end: "2027-12-31"
-    };
-    localStorage.setItem('db_clients', JSON.stringify(clients));
-
-    const progress = JSON.parse(localStorage.getItem('db_progress') || '{}');
-    progress[name] = [{ week: "Wk 1", val: 75 }];
-    localStorage.setItem('db_progress', JSON.stringify(progress));
-
-    const workouts = JSON.parse(localStorage.getItem('db_workouts') || '{}');
-    workouts[name] = [];
-    localStorage.setItem('db_workouts', JSON.stringify(workouts));
-
-    currentActiveClient = name;
-    rebuildClientDropdownList();
-    synchronizeActiveClientRecord();
-    alert(`Client ${name} saved successfully.`);
+        if (typeof refreshClientList === "function") {
+            refreshClientList();
+        }
+        alert(`Client ${name} saved successfully.`);
+    })
+    .catch(error => {
+        console.error("Save Client Endpoint Mismatch Exception:", error);
+        alert(`Failed to execute record insertion: ${error.message}`);
+    });
 }
+
 
 /**
  * Uses a basic randomization loop to emulate the original script's automated assignment logic.
  */
+/**
+ * Triggers the backend AI generator to randomly select and assign a template protocol to a profile.
+ */
 function triggerAIGenerator() {
-    if (!currentActiveClient) return alert("Select a client first");
-    const keys = Object.keys(AI_PROGRAM_TEMPLATES);
-    const randomType = keys[Math.floor(Math.random() * keys.length)];
-    const list = AI_PROGRAM_TEMPLATES[randomType];
-    const chosenDetail = list[Math.floor(Math.random() * list.length)];
+    if (!currentActiveClient) {
+        return alert("Select a client first");
+    }
 
-    const clients = JSON.parse(localStorage.getItem('db_clients') || '{}');
-    clients[currentActiveClient].program = chosenDetail;
-    localStorage.setItem('db_clients', JSON.stringify(clients));
+    // Capture the template dictionary keys to pick a type category random variable
+    const trackingKeys = Object.keys(AI_PROGRAM_TEMPLATES);
+    if (trackingKeys.length === 0) {
+        return alert("Configuration Error: No operational AI templates initialized.");
+    }
+    const pickedProgramType = trackingKeys[Math.floor(Math.random() * trackingKeys.length)];
 
-    alert(`Program Generated for ${currentActiveClient}: ${chosenDetail}`);
-    synchronizeActiveClientRecord();
+    // Dispatch the payload directly to your backend endpoint matrix
+    fetch("/api/ai_program", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({
+            name: currentActiveClient,
+            program_type: pickedProgramType
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || "AI script generator engine failure");
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Unpack response message or fallback to dynamic alert layout parameters
+        const serverFeedbackMessage = data.message || `Program Generated for ${currentActiveClient}`;
+        alert(serverFeedbackMessage);
+
+        // Force systematic interface layout re-renders to load fresh profile state rows
+        if (typeof loadClient === "function") {
+            loadClient();
+        }
+    })
+    .catch(error => {
+        console.error("AI Generation Exception:", error);
+        alert(`Failed to execute engine script: ${error.message}`);
+    });
 }
+
 
 /**
  * Emulates the original report builder pipeline.
  */
 function triggerPDFReport() {
-    if (!currentActiveClient) return alert("Select a client first");
-    alert(`PDF Structural Serialization complete:\n"${currentActiveClient}_report.pdf" created successfully.`);
+    if (!currentActiveClient) {
+        return alert("Select a client first");
+    }
+    alert(currentActiveClient);
+
+    // Encode parameter safely to handle spaces and complex special characters
+    const targetUrl = `/api/generate_pdf?name=${encodeURIComponent(currentActiveClient)}`;
+
+    fetch(targetUrl, {
+        method: "GET",
+        headers: {
+            "Accept": "application/json"
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Unpack structured error messages if client profile context is missing
+            return response.json().then(err => { throw new Error(err.error || "Server error"); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Precise string feedback alert matching successful output logs
+        alert(`PDF Structural Serialization complete:\n"${currentActiveClient}_report.pdf" created successfully.`);
+    })
+    .catch(error => {
+        console.error("PDF Generation Exception:", error);
+        alert(`Export Failure: ${error.message}`);
+    });
 }
 
 /**
@@ -288,4 +359,85 @@ function executeLogin() {
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('app-container').classList.add('hidden');
+    refreshClientList();
 });
+
+function refreshClientList() {
+    fetch('/api/clients/names', { method: 'GET' })
+    .then(res => {
+        if (!res.ok) throw new Error("Backend program definitions sync failure");
+        return res.json();
+    })
+    .then(data => {
+        const combobox = document.getElementById("client-selector");
+        combobox.innerHTML = '<option value="" selected>-- Select Existing Client --</option>';
+
+        // Handles safe fallback tracking array iteration loops cleanly
+        const clients = data.clients || data.names || data;
+
+        clients.forEach(client => {
+            // Unpack element array row structures sent directly from SQLite data sets
+            const nameValue = (typeof client === 'object' && client !== null) ? (client.name || client[0]) : client;
+            if (nameValue) {
+                const option = document.createElement("option");
+                option.value = nameValue;
+                option.textContent = nameValue;
+                combobox.appendChild(option);
+            }
+        });
+        if (currentClient) combobox.value = currentClient;
+    })
+    .catch(err => console.error("API error loading fitness modules:", err));
+}
+
+/**
+ * Loads an active client profile's parameters and logs it to the console terminal view.
+ */
+function loadClient() {
+    const name = currentActiveClient;
+
+    if (!currentActiveClient) {
+        document.getElementById('summary-diagnostics-console').innerText = "Select an active client profile matrix from the selector console to generate dynamic diagnostic summary records...";
+        document.getElementById('workout-ledger-rows').innerHTML = '<tr><td colspan="4" style="text-align:center;" class="text-neutral-500 italic">Select active profile to render ledger tracking sequences</td></tr>';
+        if (activeChartInstance) activeChartInstance.destroy();
+        return;
+    }
+
+    if (!name) {
+        alert("Enter or select client name first.");
+        return;
+    }
+
+    fetch('/api/refresh_summary?name=' + encodeURIComponent(name))
+    .then(res => {
+        if (!res.ok) {
+            return res.json().then(err => { throw new Error(err.error || "Client tracking structure not found."); });
+        }
+        return res.json();
+    })
+    .then(data => {
+        // FIXED: Extract the lower-case payload nested inside your API's "message" key
+        if (!data || !data.message) return;
+        const profile = data.message;
+
+        // Render data using the exact case matching your backend dict keys (profile.name, profile.program, etc.)
+        document.getElementById('summary-diagnostics-console').innerText =
+            `Name: ${profile.name || 'N/A'}\n` +
+            `Program: ${profile.program || 'None Assigned'}\n` +
+            `Calories: ${profile.calories || 'N/A'}\n` +
+            `Membership: ${profile.membership || 'Active'}`;
+
+        // Cascade execution signals to update associated tabs and analytics
+        if (typeof renderWorkoutLedgerTable === "function") {
+            renderWorkoutLedgerTable();
+        }
+        if (typeof renderPerformanceChartLoop === "function") {
+            renderPerformanceChartLoop();
+        }
+    })
+    .catch(err => {
+        console.error("Load Client System Exception:", err);
+        alert(err.message);
+    });
+}
+

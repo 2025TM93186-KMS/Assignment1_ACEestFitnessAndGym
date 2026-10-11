@@ -22,6 +22,12 @@ CORS(app)  # Eliminates Cross-Origin blocking parameters for client integrations
 CLIENTS_DB = []
 DB_NAME = "aceest_fitness.db"
 
+program_templates = {
+            "Fat Loss": ["Full Body HIIT", "Circuit Training", "Cardio + Weights"],
+            "Muscle Gain": ["Push/Pull/Legs", "Upper/Lower Split", "Full Body Strength"],
+            "Beginner": ["Full Body 3x/week", "Light Strength + Mobility"]
+        }
+
 PROGRAMS = {
             "Fat Loss (FL) – 3 day": {"factor": 22, "desc": "3-day full-body fat loss"},
             "Fat Loss (FL) – 5 day": {"factor": 24, "desc": "5-day split, higher volume fat loss"},
@@ -787,10 +793,10 @@ def refresh_summary():
             if not client:
                 return jsonify({"error": "Client not found"}), 404
             client_summary = {
-                "Name": client[1],
-                "Program": client[5],
-                "Calories": client[6],
-                "Membership": client[9]
+                "name": client[1],
+                "program": client[5],
+                "calories": client[6],
+                "membership": client[9]
             }
             return jsonify({"message": client_summary}), 200
     except Exception as e:

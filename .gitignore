@@ -10,3 +10,4 @@ myenv/
 *.xml
 .idea/dbnavigator.xml
 static/app - Copy.js
+*.pdf
