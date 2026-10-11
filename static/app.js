@@ -266,7 +266,7 @@ function triggerMembershipCheck() {
 /**
  * Re-renders the rows inside the workout table.
  */
-function renderWorkoutLedgerTable() {
+/*function renderWorkoutLedgerTable() {
     const tbody = document.getElementById('workout-ledger-rows');
     tbody.innerHTML = "";
     const workoutList = JSON.parse(localStorage.getItem('db_workouts') || '{}')[currentActiveClient] || [];
@@ -282,6 +282,69 @@ function renderWorkoutLedgerTable() {
         tbody.appendChild(tr);
     });
 }
+*/
+
+/**
+ * Fetches and renders historical workout ledger entries straight from the backend database.
+ */
+function renderWorkoutLedgerTable() {
+    const tbody = document.getElementById('workout-ledger-rows');
+    if (!tbody) return;
+
+    if (!currentActiveClient) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;" class="text-neutral-500 italic">Select active profile to render ledger tracking sequences</td></tr>';
+        return;
+    }
+
+    // Safely encode parameters to support spaces and special characters inside URLs
+    const targetUrl = `/api/workout?name=${encodeURIComponent(currentActiveClient)}`;
+
+    fetch(targetUrl, {
+        method: "GET",
+        headers: {
+            "Accept": "application/json"
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || "Failed to load history"); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        tbody.innerHTML = "";
+
+        // Extract the tuple collection block array returned from Python
+        const historyList = data.workout_history || [];
+
+        if (historyList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;" class="text-neutral-500 italic">No historical data logs recorded.</td></tr>';
+            return;
+        }
+
+        // Iterate over arrays by index position to mirror the SQLite SELECT column sorting rules exactly
+        historyList.forEach(workoutTuple => {
+            const dateVal = workoutTuple[0] || "N/A";
+            const typeVal = workoutTuple[1] || "N/A";
+            const durationVal = workoutTuple[2] !== undefined ? `${workoutTuple[2]} min` : "N/A";
+            const notesVal = workoutTuple[3] || "";
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${dateVal}</td>
+                <td>${typeVal}</td>
+                <td style="text-align:center;">${durationVal}</td>
+                <td>${notesVal}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    })
+    .catch(error => {
+        console.error("Workout Ledger Interface Exception Failure Loop:", error);
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: #ef4444;" class="font-semibold">Sync Failure: ${error.message}</td></tr>`;
+    });
+}
+
 
 /**
  * Initializes form validation defaults inside open input modals.
@@ -298,7 +361,7 @@ function openLogWorkoutWindow() {
  * Appends a new item payload directly to your workspace tracking histories.
  */
 function commitWorkoutEntry() {
-    const dateVal = document.getElementById('modal-workout-date').value;
+    /* const dateVal = document.getElementById('modal-workout-date').value;
     const typeVal = document.getElementById('modal-workout-type').value;
     const durVal = parseInt(document.getElementById('modal-workout-duration').value) || 60;
     const notesVal = document.getElementById('modal-workout-notes').value || "N/A";
@@ -310,7 +373,65 @@ function commitWorkoutEntry() {
     localStorage.setItem('db_workouts', JSON.stringify(workouts));
 
     closeModalWindow('workout-modal');
-    renderWorkoutLedgerTable();
+    renderWorkoutLedgerTable(); */
+     // 1. Extract values straight from the modal form input element fields
+    const dateVal = document.getElementById('modal-workout-date').value;
+    let typeVal = document.getElementById('modal-workout-type').value;
+    const durVal = parseFloat(document.getElementById('modal-workout-duration').value) || 60.0;
+    const notesVal = document.getElementById('modal-workout-notes').value || "";
+
+    if (!currentActiveClient) {
+        return alert("Select an active client profile first.");
+    }
+
+    // SANITIZATION LAYER: Normalise "Cardio" down to "Conditioning" to prevent 404 validation failures
+    if (typeVal === "Cardio") {
+        typeVal = "Conditioning";
+    }
+
+    // 2. Map payload keys precisely to match request.json lookups inside Python
+    const payload = {
+        name: currentActiveClient,
+        date: dateVal,
+        workout: typeVal, // Keyed explicitly to "workout" as required by data.get("workout")
+        duration: durVal,
+        notes: notesVal
+    };
+
+    // 3. Dispatch payload to backend endpoint matrix
+    fetch("/api/workout", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Unpack custom server exception messages cleanly if parameters fail constraint checks
+            return response.json().then(err => { throw new Error(err.error || "Failed to log entry"); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Notify operator using success messages returned straight from the backend
+        alert(data.message || "Workout logged successfully");
+
+        // 4. Hide form modal backdrop view frame
+        if (typeof closeModalWindow === "function") {
+            closeModalWindow('workout-modal');
+        }
+
+        // 5. Instantly refresh the historical ledger layout table view to load new database rows
+        if (typeof renderWorkoutLedgerTable === "function") {
+            renderWorkoutLedgerTable();
+        }
+    })
+    .catch(error => {
+        console.error("Workout Logging Mismatch Exception:", error);
+        alert(`Log Failure: ${error.message}`);
+    });
 }
 
 /**
