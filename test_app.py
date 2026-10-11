@@ -1,6 +1,10 @@
 import pytest
 from app import app
 
+import random
+from fpdf import FPDF, XPos, YPos
+
+
 @pytest.fixture
 def client():
     """Initializes a sandboxed test client instance for testing routes"""

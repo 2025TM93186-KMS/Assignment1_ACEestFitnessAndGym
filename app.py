@@ -811,9 +811,8 @@ def export_pdf_report():
 # endregion
 
 
-
+init_db()
 if __name__ == "__main__":
-    init_db()
     port_number = 5000
     for arg in sys.argv:
         if arg.startswith('--port='):
