@@ -193,7 +193,6 @@ function triggerPDFReport() {
     if (!currentActiveClient) {
         return alert("Select a client first");
     }
-    alert(currentActiveClient);
 
     // Encode parameter safely to handle spaces and complex special characters
     const targetUrl = `/api/generate_pdf?name=${encodeURIComponent(currentActiveClient)}`;
@@ -508,19 +507,52 @@ document.getElementById('app-container').classList.add('hidden');
 document.getElementById('app-container').style.display = 'none';
 });*/
 
+/**
+ * Executes a role-based login validation against the backend API and controls view swaps.
+ */
 function executeLogin() {
-    const user = document.getElementById('auth-username').value.trim();
-    const pass = document.getElementById('auth-password').value.trim();
+    const userVal = document.getElementById('auth-username').value.trim();
+    const passVal = document.getElementById('auth-password').value.trim();
 
-    if (user === "admin" && pass === "admin") {
+    if (!userVal || !passVal) {
+        return alert("Please enter both Username and Password.");
+    }
+
+    fetch("/api/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({
+            username: userVal,
+            password: passVal
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || "Authentication failed"); });
+        }
+        return response.json();
+    })
+    .then(data => {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
-        document.getElementById('app-title-header').innerText = "ACEest Dashboard (Admin)";
-        bootApplicationStorageDB();
-    } else {
-        alert("Login Failed: Invalid credentials layout parameters.");
-    }
+        alert(data.message);
+
+        const userRole = data.role || "Admin";
+        document.getElementById('app-title-header').innerText = `ACEest Dashboard (${userRole})`;
+
+        if (typeof refreshClientList === "function") {
+            refreshClientList();
+        }
+    })
+    .catch(error => {
+        console.error("Authentication Exception Error Loop:", error);
+        alert(error.message);
+    });
 }
+
 
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('login-screen').classList.remove('hidden');
