@@ -263,30 +263,6 @@ function triggerMembershipCheck() {
     });
 }
 
-/**
- * Re-renders the rows inside the workout table.
- */
-/*function renderWorkoutLedgerTable() {
-    const tbody = document.getElementById('workout-ledger-rows');
-    tbody.innerHTML = "";
-    const workoutList = JSON.parse(localStorage.getItem('db_workouts') || '{}')[currentActiveClient] || [];
-
-    if (workoutList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;" class="text-neutral-500 italic">No historical data logs recorded.</td></tr>';
-        return;
-    }
-
-    workoutList.forEach(w => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${w.date}</td><td>${w.type}</td><td style="text-align:center;">${w.duration} min</td><td>${w.notes}</td>`;
-        tbody.appendChild(tr);
-    });
-}
-*/
-
-/**
- * Fetches and renders historical workout ledger entries straight from the backend database.
- */
 function renderWorkoutLedgerTable() {
     const tbody = document.getElementById('workout-ledger-rows');
     if (!tbody) return;
@@ -361,20 +337,6 @@ function openLogWorkoutWindow() {
  * Appends a new item payload directly to your workspace tracking histories.
  */
 function commitWorkoutEntry() {
-    /* const dateVal = document.getElementById('modal-workout-date').value;
-    const typeVal = document.getElementById('modal-workout-type').value;
-    const durVal = parseInt(document.getElementById('modal-workout-duration').value) || 60;
-    const notesVal = document.getElementById('modal-workout-notes').value || "N/A";
-
-    const workouts = JSON.parse(localStorage.getItem('db_workouts') || '{}');
-    if (!workouts[currentActiveClient]) workouts[currentActiveClient] = [];
-
-    workouts[currentActiveClient].unshift({ date: dateVal, type: typeVal, duration: durVal, notes: notesVal });
-    localStorage.setItem('db_workouts', JSON.stringify(workouts));
-
-    closeModalWindow('workout-modal');
-    renderWorkoutLedgerTable(); */
-     // 1. Extract values straight from the modal form input element fields
     const dateVal = document.getElementById('modal-workout-date').value;
     let typeVal = document.getElementById('modal-workout-type').value;
     const durVal = parseFloat(document.getElementById('modal-workout-duration').value) || 60.0;
@@ -384,12 +346,6 @@ function commitWorkoutEntry() {
         return alert("Select an active client profile first.");
     }
 
-    // SANITIZATION LAYER: Normalise "Cardio" down to "Conditioning" to prevent 404 validation failures
-    if (typeVal === "Cardio") {
-        typeVal = "Conditioning";
-    }
-
-    // 2. Map payload keys precisely to match request.json lookups inside Python
     const payload = {
         name: currentActiveClient,
         date: dateVal,
@@ -451,36 +407,93 @@ renderPerformanceChartLoop();
 /**
 • Captures historical indices to re-draw linear chart lines over canvas grids.
 */
+/**
+ * Captures historical indices from the backend API to draw line graph curves over the canvas grid.
+ */
+/**
+ * Captures data arrays from the API backend and renders a clean percentage grid line chart.
+ */
 function renderPerformanceChartLoop() {
-if (!currentActiveClient) return;
-const ctx = document.getElementById('analyticsAdherenceChart').getContext('2d');
-if (activeChartInstance) activeChartInstance.destroy();const trackData = JSON.parse(localStorage.getItem('db_progress') || '{}')[currentActiveClient] || [];
-const labels = trackData.map(item => item.week);
-const values = trackData.map(item => item.val);activeChartInstance = new Chart(ctx, {
-type: 'line',
-data: {
-labels: labels,
-datasets: [{
-label: 'Weekly Adherence (%)',
-data: values,
-borderColor: '#d4af37',
-backgroundColor: 'rgba(212, 175, 55, 0.08)',
-borderWidth: 2,
-fill: true,
-tension: 0.15
-}]
-},
-options: {
-responsive: true,
-maintainAspectRatio: false,
-scales: {
-y: { min: 0, max: 100, grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } },
-x: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } }
-},
-plugins: { legend: { display: false } }
+    const canvasElement = document.getElementById('analyticsAdherenceChart');
+    if (!canvasElement) return;
+
+    const ctx = canvasElement.getContext('2d');
+
+    if (!currentActiveClient) {
+        if (activeChartInstance) {
+            activeChartInstance.destroy();
+            activeChartInstance = null;
+        }
+        return;
+    }
+
+    const targetUrl = `/api/plot_charts?name=${encodeURIComponent(currentActiveClient)}`;
+
+    fetch(targetUrl, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || "Failed to load coordinates"); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (activeChartInstance) {
+            activeChartInstance.destroy();
+        }
+
+        if (!data || !data.message) return;
+        const chartPayload = data.message;
+
+        const xLabels = chartPayload.week || [];
+        const yValues = chartPayload.adherence || [];
+
+        // FIX: Configures standard point tracking parameters to reproduce your desktop look
+        activeChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: xLabels,
+                datasets: [{
+                    label: 'Adherence %',
+                    data: yValues,
+                    borderColor: '#1d4ed8',        // Matplotlib style royal blue line metric color
+                    backgroundColor: '#1d4ed8',   // Blue tracking fill point color
+                    borderWidth: 1.5,
+                    pointRadius: 6,               // Enlarges data point tracking visibility to match image
+                    pointHoverRadius: 8,
+                    showLine: true,               // Keeps tracking lines enabled across metrics nodes
+                    fill: false                   // Removes background gradients to match empty grid background
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: '%', color: '#000000', font: { weight: 'bold' } },
+                        grid: { color: '#e5e5e5' }, // Light gray layout grid lines matching your screenshot
+                        ticks: { stepSize: 20, color: '#000000' }
+                    },
+                    x: {
+                        grid: { color: '#e5e5e5' },
+                        ticks: { color: '#000000' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false } // Completely suppresses legend labels to maximize canvas width
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error("Chart Engine Processing Exception Loop:", error);
+    });
 }
-});
-}
+
 /**
 • Utility helper to close targeted window models.
 */
