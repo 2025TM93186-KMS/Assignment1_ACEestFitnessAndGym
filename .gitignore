@@ -3,11 +3,4 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .vscode
-app.py.save
 myenv/
-.idea/
-*.db
-*.xml
-.idea/dbnavigator.xml
-static/app - Copy.js
-*.pdf
